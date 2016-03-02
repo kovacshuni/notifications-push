@@ -1,9 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
-	"time"
+	"github.com/Financial-Times/message-queue-gonsumer/consumer"
 )
 
 type EventDispatcher struct {
@@ -23,20 +22,8 @@ func NewEvents() *EventDispatcher {
 
 type Subscriber struct{}
 
-func (d EventDispatcher) receiveEvents() {
-	// this simulates some incoming events that we wish to distribute to consumers
-	go func() {
-		for {
-			str, err := json.Marshal(struct {
-				Date time.Time `json:"date"`
-			}{time.Now()})
-			if err != nil {
-				panic(err)
-			}
-			d.incoming <- string(str)
-			time.Sleep(2 * time.Second)
-		}
-	}()
+func (d EventDispatcher) receiveEvents(msg consumer.Message) {
+	d.incoming <- msg.Body // temporary tostring :)
 }
 
 func (d EventDispatcher) distributeEvents() {

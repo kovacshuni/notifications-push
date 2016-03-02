@@ -1,11 +1,13 @@
 package main
 
 import (
+	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
+	"github.com/jawher/mow.cli"
+	"io"
 	"log"
 	"net/http"
-	"github.com/jawher/mow.cli"
 	"os"
-"io"
+	"strings"
 )
 
 const logPattern = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile | log.LUTC
@@ -14,25 +16,72 @@ var infoLogger *log.Logger
 var warnLogger *log.Logger
 var errorLogger *log.Logger
 
+type NotificationsApp struct {
+	eventDispatcher *EventDispatcher
+	consumerConfig  *queueConsumer.QueueConfig
+	controller      *Controller
+}
+
 func main() {
 	app := cli.App("notifications-push", "Proactively notifies subscribers about new content publishes/modifications.")
-	socksProxy := app.String(cli.StringOpt{
-		Name:   "socks-proxy",
+	consumerAddrs := app.String(cli.StringOpt{
+		Name:   "consumer_proxy_addr",
 		Value:  "",
-		Desc:   "Use specified SOCKS proxy (e.g. localhost:2323)",
-		EnvVar: "SOCKS_PROXY",
+		Desc:   "Comma separated kafka proxy hosts for message consuming.",
+		EnvVar: "QUEUE_PROXY_ADDRS",
 	})
-	println(socksProxy)
+	consumerGroupId := app.String(cli.StringOpt{
+		Name:   "consumer_group_id",
+		Value:  "",
+		Desc:   "Kafka qroup id used for message consuming.",
+		EnvVar: "GROUP_ID",
+	})
+	consumerOffset := app.String(cli.StringOpt{
+		Name:   "consumer_offset",
+		Value:  "smallest",
+		Desc:   "Kafka read offset. e.g. \"largest\", \"smallest\"",
+		EnvVar: "CONSUMER_OFFSET",
+	})
+	consumerAutoCommitEnable := app.Bool(cli.BoolOpt{
+		Name:   "consumer_autocommit_enable",
+		Value:  false,
+		Desc:   "Enable autocommit for small messages.",
+		EnvVar: "CONSUMER_AUTOCOMMIT_ENABLE",
+	})
+	consumerAuthorizationKey := app.String(cli.StringOpt{
+		Name:   "consumer_authorization_key",
+		Value:  "",
+		Desc:   "The authorization key required to UCS access.",
+		EnvVar: "AUTHORIZATION_KEY",
+	})
+	topic := app.String(cli.StringOpt{
+		Name:   "topic",
+		Value:  "",
+		Desc:   "Kafka topic to read from.",
+		EnvVar: "TOPIC",
+	})
 	app.Action = func() {
 		initLogs(os.Stdout, os.Stdout, os.Stderr)
 
 		dispatcher := NewEvents()
-		go dispatcher.receiveEvents()
 		go dispatcher.distributeEvents()
 
+		consumerConfig := queueConsumer.QueueConfig{}
+		consumerConfig.Addrs = strings.Split(*consumerAddrs, ",")
+		consumerConfig.Group = *consumerGroupId
+		consumerConfig.Topic = *topic
+		consumerConfig.Offset = *consumerOffset
+		consumerConfig.AuthorizationKey = *consumerAuthorizationKey
+		consumerConfig.AutoCommitEnable = *consumerAutoCommitEnable
+
 		controller := Controller{dispatcher}
+
+		notificationsApp := NotificationsApp{dispatcher, &consumerConfig, &controller}
+
 		http.HandleFunc("/", controller.handler)
-		log.Fatal(http.ListenAndServe(":8080", nil))
+		go errorLogger.Println(http.ListenAndServe(":8080", nil))
+
+		notificationsApp.consumeMessages()
 	}
 	app.Run(os.Args)
 }

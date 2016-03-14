@@ -1,13 +1,15 @@
 package main
 
 import (
-	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
-	"github.com/jawher/mow.cli"
 	"io"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strings"
+
+	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
+	"github.com/jawher/mow.cli"
 )
 
 const logPattern = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile | log.LUTC
@@ -38,13 +40,13 @@ func main() {
 	})
 	consumerOffset := app.String(cli.StringOpt{
 		Name:   "consumer_offset",
-		Value:  "smallest",
+		Value:  "",
 		Desc:   "Kafka read offset. e.g. \"largest\", \"smallest\"",
 		EnvVar: "CONSUMER_OFFSET",
 	})
 	consumerAutoCommitEnable := app.Bool(cli.BoolOpt{
 		Name:   "consumer_autocommit_enable",
-		Value:  false,
+		Value:  true,
 		Desc:   "Enable autocommit for small messages.",
 		EnvVar: "CONSUMER_AUTOCOMMIT_ENABLE",
 	})
@@ -74,12 +76,17 @@ func main() {
 		consumerConfig.AuthorizationKey = *consumerAuthorizationKey
 		consumerConfig.AutoCommitEnable = *consumerAutoCommitEnable
 
+		infoLogger.Printf("Consumer config: [%#v]", consumerConfig)
 		controller := Controller{dispatcher}
 
 		notificationsApp := NotificationsApp{dispatcher, &consumerConfig, &controller}
 
 		http.HandleFunc("/", controller.handler)
-		go errorLogger.Println(http.ListenAndServe(":8080", nil))
+
+		go func() {
+			err := http.ListenAndServe(":8080", nil)
+			errorLogger.Println(err)
+		}()
 
 		notificationsApp.consumeMessages()
 	}

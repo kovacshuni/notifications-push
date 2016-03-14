@@ -1,7 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
+	"regexp"
+	"strings"
+
 	"github.com/Financial-Times/message-queue-gonsumer/consumer"
 )
 
@@ -22,25 +26,45 @@ func NewEvents() *EventDispatcher {
 
 type Subscriber struct{}
 
+var whitelist = regexp.MustCompile("^http://(methode-article|methode-list|wordpress-article)-transformer-(pr|iw)-uk-.*\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$")
+
 func (d EventDispatcher) receiveEvents(msg consumer.Message) {
-	d.incoming <- msg.Body // temporary tostring :)
+	if strings.HasPrefix(msg.Headers["X-Request-Id"], "SYNTH") {
+		return
+	}
+	var jsonMsg map[string]interface{}
+	err := json.Unmarshal([]byte(msg.Body), &jsonMsg)
+	if err != nil {
+		warnLogger.Printf("Skipping: [%v]", err)
+		return
+	}
+
+	contentUri, ok := jsonMsg["contentUri"].(string)
+	if ok && whitelist.MatchString(contentUri) {
+		d.incoming <- buildNotification(msg.Body)
+		return
+	}
+	infoLogger.Printf("Skipping msg with contentUri [%v]", jsonMsg["contentUri"])
 }
 
 func (d EventDispatcher) distributeEvents() {
 	for {
 		select {
 		case msg := <-d.incoming:
+			infoLogger.Printf("Broadcasting new message: [%v]", msg)
 			for sub, _ := range d.subscribers {
 				select {
 				case sub <- msg:
-				default:
-					log.Printf("listener too far behind - message dropped")
+					//default:
+					//	infoLogger.Printf("listener too far behind - message dropped")
 				}
 			}
 		case subscriber := <-d.addSubscriber:
+			log.Printf("New subscriber")
 			d.subscribers[subscriber] = Subscriber{}
 		case subscriber := <-d.removeSubscriber:
 			delete(d.subscribers, subscriber)
+			log.Printf("Subscriber left")
 		}
 	}
 }

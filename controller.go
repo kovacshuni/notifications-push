@@ -20,12 +20,26 @@ func (c Controller) handler(w http.ResponseWriter, r *http.Request) {
 	events := make(chan string)
 
 	c.dispatcher.addSubscriber <- events
-	defer func() { c.dispatcher.removeSubscriber <- events }()
-
+	defer func() {
+		c.dispatcher.removeSubscriber <- events
+	}()
 	for {
-		bw.WriteString(<-events)
-		bw.WriteByte('\n')
-		bw.Flush()
+		_, err := bw.WriteString(<-events)
+		if err != nil {
+			infoLogger.Printf("[%v]", err)
+			return
+		}
+		err = bw.WriteByte('\n')
+		if err != nil {
+			infoLogger.Printf("[%v]", err)
+			return
+		}
+		err = bw.Flush()
+		if err != nil {
+			infoLogger.Printf("[%v]", err)
+			return
+		}
+		infoLogger.Println("Flushing data to client.")
 		flusher := w.(http.Flusher)
 		flusher.Flush()
 	}

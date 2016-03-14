@@ -40,23 +40,47 @@ func (d EventDispatcher) receiveEvents(msg consumer.Message) {
 	}
 
 	contentUri, ok := jsonMsg["contentUri"].(string)
-	if ok && whitelist.MatchString(contentUri) {
-		d.incoming <- buildNotification(msg.Body)
+	if !ok || !whitelist.MatchString(contentUri) {
+		infoLogger.Printf("Skipping msg with contentUri [%v]", jsonMsg["contentUri"])
 		return
 	}
-	infoLogger.Printf("Skipping msg with contentUri [%v]", jsonMsg["contentUri"])
+
+	//TODO use []byte instead of string
+	notification := buildNotification(jsonMsg)
+	if notification == "" {
+		warnLogger.Printf("Cannot build notification for msg: [%v]", jsonMsg)
+		return
+	}
+	d.incoming <- notification
+
+}
+
+//TODO make this complete
+func buildNotification(jsonMsg map[string]interface{}) string {
+	relativeUrl, ok := jsonMsg["relativeUrl"].(string)
+	if !ok {
+		return ""
+	}
+	apiUrl := "http://api.ft.com" + relativeUrl
+	notification := make(map[string]string)
+	notification["apiUrl"] = apiUrl
+	result, err := json.Marshal(notification)
+	if err != nil {
+		warnLogger.Printf("Marshalling failed: [%v]", err)
+		return ""
+	}
+	return string(result[:])
 }
 
 func (d EventDispatcher) distributeEvents() {
 	for {
 		select {
 		case msg := <-d.incoming:
-			infoLogger.Printf("Broadcasting new message: [%v]", msg)
 			for sub, _ := range d.subscribers {
 				select {
 				case sub <- msg:
-					//default:
-					//	infoLogger.Printf("listener too far behind - message dropped")
+				default:
+					infoLogger.Printf("listener too far behind - message dropped")
 				}
 			}
 		case subscriber := <-d.addSubscriber:

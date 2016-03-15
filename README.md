@@ -2,7 +2,7 @@
 
 Proactively notifies subscribers about new content publishes/modifications.
 
-## Build & Run locally
+## Build & Run the binary
 
 ```bash
 go build
@@ -13,7 +13,7 @@ go build
     --topic="CmsPublicationEvents"
 ```
 
-Docker?
+## Build & Run with Docker
 
 ```
 docker build -t coco/notifications-push .

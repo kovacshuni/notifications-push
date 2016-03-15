@@ -24,52 +24,58 @@ func NewEvents() *EventDispatcher {
 	return &EventDispatcher{incoming, subscribers, addSubscriber, removeSubscriber}
 }
 
+type notification struct {
+	ApiUrl string
+	Id     string
+	Type   string
+}
+
 type Subscriber struct{}
 
-var whitelist = regexp.MustCompile("^http://(methode-article|methode-list|wordpress-article)-transformer-(pr|iw)-uk-.*\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$")
+var whitelist = regexp.MustCompile("^http://(methode-article|wordpress-article)-transformer-(pr|iw)-uk-.*\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$")
 
 func (d EventDispatcher) receiveEvents(msg consumer.Message) {
 	if strings.HasPrefix(msg.Headers["X-Request-Id"], "SYNTH") {
 		return
 	}
-	var jsonMsg map[string]interface{}
-	err := json.Unmarshal([]byte(msg.Body), &jsonMsg)
+	var cmsPubEvent cmsPublicationEvent
+	err := json.Unmarshal([]byte(msg.Body), &cmsPubEvent)
 	if err != nil {
-		warnLogger.Printf("Skipping: [%v]", err)
+		warnLogger.Printf("Skipping cmsPublicationEvent [%v]: [%v].", msg.Body, err)
+		return
+	}
+	if !whitelist.MatchString(cmsPubEvent.ContentUri) {
+		infoLogger.Printf("Skipping msg with contentUri [%v]", cmsPubEvent.ContentUri)
 		return
 	}
 
-	contentUri, ok := jsonMsg["contentUri"].(string)
-	if !ok || !whitelist.MatchString(contentUri) {
-		infoLogger.Printf("Skipping msg with contentUri [%v]", jsonMsg["contentUri"])
+	notification := buildNotification(cmsPubEvent)
+	if notification == nil {
+		warnLogger.Printf("Skipping. Cannot build notification for msg: [%#v]", cmsPubEvent)
 		return
 	}
-
-	//TODO use []byte instead of string
-	notification := buildNotification(jsonMsg)
-	if notification == "" {
-		warnLogger.Printf("Cannot build notification for msg: [%v]", jsonMsg)
+	bytes, err := json.Marshal(notification)
+	if err != nil {
+		warnLogger.Printf("Skipping notification [%#v]: [%v]", notification, err)
 		return
 	}
-	d.incoming <- notification
-
+	d.incoming <- string(bytes[:])
 }
 
-//TODO make this complete
-func buildNotification(jsonMsg map[string]interface{}) string {
-	relativeUrl, ok := jsonMsg["relativeUrl"].(string)
-	if !ok {
-		return ""
+func buildNotification(cmsPubEvent cmsPublicationEvent) *notification {
+	if cmsPubEvent.UUID == "" {
+		return nil
 	}
-	apiUrl := "http://api.ft.com" + relativeUrl
-	notification := make(map[string]string)
-	notification["apiUrl"] = apiUrl
-	result, err := json.Marshal(notification)
-	if err != nil {
-		warnLogger.Printf("Marshalling failed: [%v]", err)
-		return ""
+
+	eventType := "UPDATE"
+	if len(cmsPubEvent.Payload) == 0 {
+		eventType = "DELETE"
 	}
-	return string(result[:])
+	return &notification{
+		ApiUrl: "http://www.ft.com/thing/ThingChangeType/" + eventType,
+		Id:     "http://api.ft.com/content/" + cmsPubEvent.UUID,
+		Type:   "http://www.ft.com/thing/ThingChangeType/" + eventType,
+	}
 }
 
 func (d EventDispatcher) distributeEvents() {

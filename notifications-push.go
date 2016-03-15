@@ -38,12 +38,6 @@ func main() {
 		Desc:   "Kafka qroup id used for message consuming.",
 		EnvVar: "GROUP_ID",
 	})
-	consumerOffset := app.String(cli.StringOpt{
-		Name:   "consumer_offset",
-		Value:  "",
-		Desc:   "Kafka read offset. e.g. \"largest\", \"smallest\"",
-		EnvVar: "CONSUMER_OFFSET",
-	})
 	consumerAutoCommitEnable := app.Bool(cli.BoolOpt{
 		Name:   "consumer_autocommit_enable",
 		Value:  true,
@@ -72,7 +66,6 @@ func main() {
 		consumerConfig.Addrs = strings.Split(*consumerAddrs, ",")
 		consumerConfig.Group = *consumerGroupId
 		consumerConfig.Topic = *topic
-		consumerConfig.Offset = *consumerOffset
 		consumerConfig.AuthorizationKey = *consumerAuthorizationKey
 		consumerConfig.AutoCommitEnable = *consumerAutoCommitEnable
 

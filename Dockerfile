@@ -1,7 +1,6 @@
 FROM alpine:3.3
 
 ADD *.go /notifications-push/
-ADD notifications-push/*.go
 
 RUN apk add --update bash \
   && apk --update add git bzr \

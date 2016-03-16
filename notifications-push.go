@@ -75,7 +75,7 @@ func main() {
 
 		notificationsApp := NotificationsApp{dispatcher, &consumerConfig, &controller}
 
-		http.HandleFunc("/", controller.handler)
+		http.HandleFunc("/notifications", controller.handler)
 
 		go func() {
 			err := http.ListenAndServe(":8080", nil)

@@ -9,7 +9,7 @@ type Controller struct {
 	dispatcher *EventDispatcher
 }
 
-func (c Controller) handler(w http.ResponseWriter, r *http.Request) {
+func (c Controller) notifications(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Pragma", "no-cache")
@@ -42,4 +42,10 @@ func (c Controller) handler(w http.ResponseWriter, r *http.Request) {
 		flusher := w.(http.Flusher)
 		flusher.Flush()
 	}
+}
+
+func (c Controller) healthcheck(w http.ResponseWriter, r *http.Request) {
+	consumer := queueConsumer.NewConsumer(*consumerConfig, n.eventDispatcher.receiveEvents, http.Client{})
+	consumer.Start()
+	consumer.Stop()
 }

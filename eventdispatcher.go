@@ -84,40 +84,18 @@ func buildNotification(cmsPubEvent cmsPublicationEvent) *notification {
 	}
 }
 
-const heartbeatMsg = "[]"
-const heartbeatPeriod = 60
-
-func newTimer() *time.Timer {
-	return time.NewTimer(heartbeatPeriod * time.Second)
-}
-
-func resetTimer(timer *time.Timer) *time.Timer {
-	if ok := timer.Reset(heartbeatPeriod * time.Second); !ok {
-		infoLogger.Println("Resetting timer failed. Creating new timer")
-		timer = newTimer()
-	}
-	return timer
-}
-
 func (d EventDispatcher) distributeEvents() {
 	heartbeat := newTimer()
 	for {
 		select {
 		case msg := <-d.incoming:
 			for sub, _ := range d.subscribers {
-				select {
-				case sub <- msg:
-					//infoLogger.Printf("Sent msg [%v]", msg)
-					//default:
-					//	//TODO monitor this
-					//	infoLogger.Printf("listener too far behind - message [%v] dropped", msg)
-				}
+				go func(sub chan string) { sub <- msg }(sub)
 			}
 			resetTimer(heartbeat)
 		case <-heartbeat.C:
-			infoLogger.Println("Heartbeat fired")
 			for sub, _ := range d.subscribers {
-				sub <- heartbeatMsg
+				go func(sub chan string) { sub <- heartbeatMsg }(sub)
 			}
 			heartbeat = newTimer()
 		case subscriber := <-d.addSubscriber:
@@ -127,5 +105,19 @@ func (d EventDispatcher) distributeEvents() {
 			delete(d.subscribers, subscriber)
 			log.Printf("Subscriber left")
 		}
+	}
+}
+
+const heartbeatMsg = "[]"
+const heartbeatPeriod = 60
+
+func newTimer() *time.Timer {
+	return time.NewTimer(heartbeatPeriod * time.Second)
+}
+
+func resetTimer(timer *time.Timer) {
+	if ok := timer.Reset(heartbeatPeriod * time.Second); !ok {
+		infoLogger.Println("Resetting timer failed. Creating new timer")
+		timer = newTimer()
 	}
 }

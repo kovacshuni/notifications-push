@@ -43,9 +43,3 @@ func (c Controller) notifications(w http.ResponseWriter, r *http.Request) {
 		flusher.Flush()
 	}
 }
-
-func (c Controller) healthcheck(w http.ResponseWriter, r *http.Request) {
-	consumer := queueConsumer.NewConsumer(*consumerConfig, n.eventDispatcher.receiveEvents, http.Client{})
-	consumer.Start()
-	consumer.Stop()
-}

@@ -107,9 +107,10 @@ func (d EventDispatcher) distributeEvents() {
 			for sub, _ := range d.subscribers {
 				select {
 				case sub <- msg:
-				default:
-					//TODO monitor this
-					infoLogger.Printf("listener too far behind - message dropped")
+					//infoLogger.Printf("Sent msg [%v]", msg)
+					//default:
+					//	//TODO monitor this
+					//	infoLogger.Printf("listener too far behind - message [%v] dropped", msg)
 				}
 			}
 			resetTimer(heartbeat)

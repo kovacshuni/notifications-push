@@ -5,6 +5,7 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Financial-Times/message-queue-gonsumer/consumer"
 )
@@ -25,9 +26,9 @@ func NewEvents() *EventDispatcher {
 }
 
 type notification struct {
-	ApiUrl string
-	Id     string
-	Type   string
+	ApiUrl string `json:"apiUrl"`
+	Id     string `json:"id"`
+	Type   string `json:"type"`
 }
 
 type Subscriber struct{}
@@ -49,16 +50,21 @@ func (d EventDispatcher) receiveEvents(msg consumer.Message) {
 		return
 	}
 
-	notification := buildNotification(cmsPubEvent)
-	if notification == nil {
+	//infoLogger.Printf("CmsPublicationEvent with tid [%v] is valid.", msg.Headers["X-Request-Id"])
+	n := buildNotification(cmsPubEvent)
+	if n == nil {
 		warnLogger.Printf("Skipping. Cannot build notification for msg: [%#v]", cmsPubEvent)
 		return
 	}
-	bytes, err := json.Marshal(notification)
+	bytes, err := json.Marshal([]*notification{n})
 	if err != nil {
-		warnLogger.Printf("Skipping notification [%#v]: [%v]", notification, err)
+		warnLogger.Printf("Skipping notification [%#v]: [%v]", n, err)
 		return
 	}
+
+	//wait 30sec for the content to be ingested before notifying the clients
+	time.Sleep(30 * time.Second)
+
 	d.incoming <- string(bytes[:])
 }
 
@@ -72,13 +78,29 @@ func buildNotification(cmsPubEvent cmsPublicationEvent) *notification {
 		eventType = "DELETE"
 	}
 	return &notification{
-		ApiUrl: "http://www.ft.com/thing/ThingChangeType/" + eventType,
-		Id:     "http://api.ft.com/content/" + cmsPubEvent.UUID,
 		Type:   "http://www.ft.com/thing/ThingChangeType/" + eventType,
+		Id:     "http://www.ft.com/thing/" + cmsPubEvent.UUID,
+		ApiUrl: "http://api.ft.com/content/" + cmsPubEvent.UUID,
 	}
 }
 
+const heartbeatMsg = "[]"
+const heartbeatPeriod = 60
+
+func newTimer() *time.Timer {
+	return time.NewTimer(heartbeatPeriod * time.Second)
+}
+
+func resetTimer(timer *time.Timer) *time.Timer {
+	if ok := timer.Reset(heartbeatPeriod * time.Second); !ok {
+		infoLogger.Println("Resetting timer failed. Creating new timer")
+		timer = newTimer()
+	}
+	return timer
+}
+
 func (d EventDispatcher) distributeEvents() {
+	heartbeat := newTimer()
 	for {
 		select {
 		case msg := <-d.incoming:
@@ -86,9 +108,17 @@ func (d EventDispatcher) distributeEvents() {
 				select {
 				case sub <- msg:
 				default:
+					//TODO monitor this
 					infoLogger.Printf("listener too far behind - message dropped")
 				}
 			}
+			resetTimer(heartbeat)
+		case <-heartbeat.C:
+			infoLogger.Println("Heartbeat fired")
+			for sub, _ := range d.subscribers {
+				sub <- heartbeatMsg
+			}
+			heartbeat = newTimer()
 		case subscriber := <-d.addSubscriber:
 			log.Printf("New subscriber")
 			d.subscribers[subscriber] = Subscriber{}

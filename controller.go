@@ -39,7 +39,6 @@ func (c Controller) handler(w http.ResponseWriter, r *http.Request) {
 			infoLogger.Printf("[%v]", err)
 			return
 		}
-		infoLogger.Println("Flushing data to client.")
 		flusher := w.(http.Flusher)
 		flusher.Flush()
 	}

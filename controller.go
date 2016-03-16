@@ -9,7 +9,7 @@ type Controller struct {
 	dispatcher *EventDispatcher
 }
 
-func (c Controller) handler(w http.ResponseWriter, r *http.Request) {
+func (c Controller) notifications(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Pragma", "no-cache")

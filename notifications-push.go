@@ -72,10 +72,13 @@ func main() {
 
 		infoLogger.Printf("Consumer config: [%#v]", consumerConfig)
 		controller := Controller{dispatcher}
+		healthcheck := &Healthcheck{client: http.Client{}, consumerConf: consumerConfig}
 
 		notificationsApp := NotificationsApp{dispatcher, &consumerConfig, &controller}
 
-		http.HandleFunc("/notifications", controller.handler)
+		http.HandleFunc("/notifications", controller.notifications)
+		http.HandleFunc("/__health", healthcheck.healthcheck())
+		http.HandleFunc("/__gtg", healthcheck.gtg)
 
 		go func() {
 			err := http.ListenAndServe(":8080", nil)

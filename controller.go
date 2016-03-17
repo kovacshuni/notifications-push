@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"net"
 	"net/http"
 )
 
@@ -34,12 +35,7 @@ func (c Controller) notifications(w http.ResponseWriter, r *http.Request) {
 		case <-cn.CloseNotify():
 			return
 		case event := <-events:
-			_, err := bw.WriteString(event)
-			if err != nil {
-				infoLogger.Printf("[%v]", err)
-				return
-			}
-			err = bw.WriteByte('\n')
+			_, err := bw.WriteString(event + "\n")
 			if err != nil {
 				infoLogger.Printf("[%v]", err)
 				return
@@ -51,6 +47,27 @@ func (c Controller) notifications(w http.ResponseWriter, r *http.Request) {
 			}
 			flusher := w.(http.Flusher)
 			flusher.Flush()
+		}
+	}
+}
+
+func (c Controller) handleConnection(conn net.Conn) {
+	events := make(chan string)
+	c.dispatcher.addSubscriber <- events
+	defer func() {
+		c.dispatcher.removeSubscriber <- events
+		if err := conn.Close(); err != nil {
+			errorLogger.Println(err)
+		}
+	}()
+
+	for {
+		event := <-events
+
+		_, err := conn.Write([]byte(event + "\n"))
+		if err != nil {
+			infoLogger.Printf("[%v]", err)
+			return
 		}
 	}
 }

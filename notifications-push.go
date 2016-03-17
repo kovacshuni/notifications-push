@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"log"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -76,13 +77,30 @@ func main() {
 
 		notificationsApp := NotificationsApp{dispatcher, &consumerConfig, &controller}
 
-		http.HandleFunc("/notifications", controller.notifications)
+		//http.HandleFunc("/notifications", controller.notifications)
 		http.HandleFunc("/__health", healthcheck.healthcheck())
 		http.HandleFunc("/__gtg", healthcheck.gtg)
 
 		go func() {
-			err := http.ListenAndServe(":8080", nil)
+			err := http.ListenAndServe(":8081", nil)
 			errorLogger.Println(err)
+		}()
+
+		go func() {
+			ln, err := net.ListenTCP("tcp", &net.TCPAddr{Port: 8080})
+			if err != nil {
+				// handle error
+				errorLogger.Println(err)
+				return
+			}
+			for {
+				conn, err := ln.Accept()
+				if err != nil {
+					errorLogger.Println(err)
+					return
+				}
+				go controller.handleConnection(conn)
+			}
 		}()
 
 		notificationsApp.consumeMessages()

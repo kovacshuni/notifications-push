@@ -90,12 +90,21 @@ func (d eventDispatcher) distributeEvents() {
 		select {
 		case msg := <-d.incoming:
 			for sub := range d.subscribers {
-				go func(sub chan string) { sub <- msg }(sub)
+				select {
+				case sub <- msg:
+				default:
+					warnLogger.Println("Subscriber lagging behind")
+				}
 			}
 			resetTimer(heartbeat)
 		case <-heartbeat.C:
 			for sub := range d.subscribers {
-				go func(sub chan string) { sub <- heartbeatMsg }(sub)
+				select {
+				case sub <- heartbeatMsg:
+				default:
+					warnLogger.Println("Subscriber lagging behind when sending heartbeat.")
+					d.removeSubscriber <- sub
+				}
 			}
 			heartbeat = newTimer()
 		case s := <-d.addSubscriber:

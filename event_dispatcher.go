@@ -103,7 +103,6 @@ func (d eventDispatcher) distributeEvents() {
 				case sub <- heartbeatMsg:
 				default:
 					warnLogger.Println("Subscriber lagging behind when sending heartbeat.")
-					d.removeSubscriber <- sub
 				}
 			}
 			heartbeat = newTimer()

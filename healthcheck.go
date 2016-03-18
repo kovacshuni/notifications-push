@@ -71,7 +71,7 @@ func (h *healthcheck) checkMessageQueueProxyReachable(address string, topic stri
 		warnLogger.Printf("Could not connect to proxy: %v", err.Error())
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		errMsg := fmt.Sprintf("Proxy returned status: %d", resp.StatusCode)
 		return errors.New(errMsg)

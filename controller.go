@@ -34,12 +34,7 @@ func (c Controller) notifications(w http.ResponseWriter, r *http.Request) {
 		case <-cn.CloseNotify():
 			return
 		case event := <-events:
-			_, err := bw.WriteString(event)
-			if err != nil {
-				infoLogger.Printf("[%v]", err)
-				return
-			}
-			err = bw.WriteByte('\n')
+			_, err := bw.WriteString(event + "\n")
 			if err != nil {
 				infoLogger.Printf("[%v]", err)
 				return

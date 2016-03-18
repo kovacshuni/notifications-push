@@ -85,7 +85,7 @@ func buildNotification(cmsPubEvent cmsPublicationEvent) *notification {
 }
 
 func (d eventDispatcher) distributeEvents() {
-	heartbeat := newTimer()
+	heartbeat := time.NewTimer(heartbeatPeriod * time.Second)
 	for {
 		select {
 		case msg := <-d.incoming:
@@ -97,7 +97,7 @@ func (d eventDispatcher) distributeEvents() {
 			for sub := range d.subscribers {
 				go func(sub chan string) { sub <- heartbeatMsg }(sub)
 			}
-			heartbeat = newTimer()
+			resetTimer(heartbeat)
 		case s := <-d.addSubscriber:
 			log.Printf("New subscriber")
 			d.subscribers[s] = subscriber{}
@@ -111,13 +111,6 @@ func (d eventDispatcher) distributeEvents() {
 const heartbeatMsg = "[]"
 const heartbeatPeriod = 60
 
-func newTimer() *time.Timer {
-	return time.NewTimer(heartbeatPeriod * time.Second)
-}
-
 func resetTimer(timer *time.Timer) {
-	if ok := timer.Reset(heartbeatPeriod * time.Second); !ok {
-		infoLogger.Println("Resetting timer failed. Creating new timer")
-		timer = newTimer()
-	}
+	timer.Reset(heartbeatPeriod * time.Second)
 }

@@ -10,32 +10,32 @@ import (
 	"github.com/Financial-Times/message-queue-gonsumer/consumer"
 )
 
-type EventDispatcher struct {
+type eventDispatcher struct {
 	incoming         chan string
-	subscribers      map[chan string]Subscriber
+	subscribers      map[chan string]subscriber
 	addSubscriber    chan chan string
 	removeSubscriber chan chan string
 }
 
-func NewEvents() *EventDispatcher {
+func newEvents() *eventDispatcher {
 	incoming := make(chan string)
-	subscribers := make(map[chan string]Subscriber)
+	subscribers := make(map[chan string]subscriber)
 	addSubscriber := make(chan chan string)
 	removeSubscriber := make(chan chan string)
-	return &EventDispatcher{incoming, subscribers, addSubscriber, removeSubscriber}
+	return &eventDispatcher{incoming, subscribers, addSubscriber, removeSubscriber}
 }
 
 type notification struct {
-	ApiUrl string `json:"apiUrl"`
-	Id     string `json:"id"`
+	APIURL string `json:"apiUrl"`
+	ID     string `json:"id"`
 	Type   string `json:"type"`
 }
 
-type Subscriber struct{}
+type subscriber struct{}
 
 var whitelist = regexp.MustCompile("^http://(methode-article|wordpress-article)-transformer-(pr|iw)-uk-.*\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$")
 
-func (d EventDispatcher) receiveEvents(msg consumer.Message) {
+func (d eventDispatcher) receiveEvents(msg consumer.Message) {
 	if strings.HasPrefix(msg.Headers["X-Request-Id"], "SYNTH") {
 		return
 	}
@@ -45,8 +45,8 @@ func (d EventDispatcher) receiveEvents(msg consumer.Message) {
 		warnLogger.Printf("Skipping cmsPublicationEvent [%v]: [%v].", msg.Body, err)
 		return
 	}
-	if !whitelist.MatchString(cmsPubEvent.ContentUri) {
-		infoLogger.Printf("Skipping msg with contentUri [%v]", cmsPubEvent.ContentUri)
+	if !whitelist.MatchString(cmsPubEvent.ContentURI) {
+		infoLogger.Printf("Skipping msg with contentUri [%v]", cmsPubEvent.ContentURI)
 		return
 	}
 
@@ -79,30 +79,30 @@ func buildNotification(cmsPubEvent cmsPublicationEvent) *notification {
 	}
 	return &notification{
 		Type:   "http://www.ft.com/thing/ThingChangeType/" + eventType,
-		Id:     "http://www.ft.com/thing/" + cmsPubEvent.UUID,
-		ApiUrl: "http://api.ft.com/content/" + cmsPubEvent.UUID,
+		ID:     "http://www.ft.com/thing/" + cmsPubEvent.UUID,
+		APIURL: "http://api.ft.com/content/" + cmsPubEvent.UUID,
 	}
 }
 
-func (d EventDispatcher) distributeEvents() {
+func (d eventDispatcher) distributeEvents() {
 	heartbeat := newTimer()
 	for {
 		select {
 		case msg := <-d.incoming:
-			for sub, _ := range d.subscribers {
+			for sub := range d.subscribers {
 				go func(sub chan string) { sub <- msg }(sub)
 			}
 			resetTimer(heartbeat)
 		case <-heartbeat.C:
-			for sub, _ := range d.subscribers {
+			for sub := range d.subscribers {
 				go func(sub chan string) { sub <- heartbeatMsg }(sub)
 			}
 			heartbeat = newTimer()
-		case subscriber := <-d.addSubscriber:
+		case s := <-d.addSubscriber:
 			log.Printf("New subscriber")
-			d.subscribers[subscriber] = Subscriber{}
-		case subscriber := <-d.removeSubscriber:
-			delete(d.subscribers, subscriber)
+			d.subscribers[s] = subscriber{}
+		case s := <-d.removeSubscriber:
+			delete(d.subscribers, s)
 			log.Printf("Subscriber left")
 		}
 	}

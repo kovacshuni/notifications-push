@@ -18,10 +18,10 @@ var infoLogger *log.Logger
 var warnLogger *log.Logger
 var errorLogger *log.Logger
 
-type NotificationsApp struct {
-	eventDispatcher *EventDispatcher
+type notificationsApp struct {
+	eventDispatcher *eventDispatcher
 	consumerConfig  *queueConsumer.QueueConfig
-	controller      *Controller
+	controller      *controller
 }
 
 func main() {
@@ -32,7 +32,7 @@ func main() {
 		Desc:   "Comma separated kafka proxy hosts for message consuming.",
 		EnvVar: "QUEUE_PROXY_ADDRS",
 	})
-	consumerGroupId := app.String(cli.StringOpt{
+	consumerGroupID := app.String(cli.StringOpt{
 		Name:   "consumer_group_id",
 		Value:  "",
 		Desc:   "Kafka qroup id used for message consuming.",
@@ -59,33 +59,33 @@ func main() {
 	app.Action = func() {
 		initLogs(os.Stdout, os.Stdout, os.Stderr)
 
-		dispatcher := NewEvents()
+		dispatcher := newEvents()
 		go dispatcher.distributeEvents()
 
 		consumerConfig := queueConsumer.QueueConfig{}
 		consumerConfig.Addrs = strings.Split(*consumerAddrs, ",")
-		consumerConfig.Group = *consumerGroupId
+		consumerConfig.Group = *consumerGroupID
 		consumerConfig.Topic = *topic
 		consumerConfig.AuthorizationKey = *consumerAuthorizationKey
 		consumerConfig.AutoCommitEnable = *consumerAutoCommitEnable
 		consumerConfig.ConcurrentProcessing = true
 
 		infoLogger.Printf("Consumer config: [%#v]", consumerConfig)
-		controller := Controller{dispatcher}
-		healthcheck := &Healthcheck{client: http.Client{}, consumerConf: consumerConfig}
+		c := controller{dispatcher}
+		hc := &healthcheck{client: http.Client{}, consumerConf: consumerConfig}
 
-		notificationsApp := NotificationsApp{dispatcher, &consumerConfig, &controller}
+		app := notificationsApp{dispatcher, &consumerConfig, &c}
 
-		http.HandleFunc("/notifications", controller.notifications)
-		http.HandleFunc("/__health", healthcheck.healthcheck())
-		http.HandleFunc("/__gtg", healthcheck.gtg)
+		http.HandleFunc("/notifications", c.notifications)
+		http.HandleFunc("/__health", hc.healthcheck())
+		http.HandleFunc("/__gtg", hc.gtg)
 
 		go func() {
 			err := http.ListenAndServe(":8080", nil)
 			errorLogger.Println(err)
 		}()
 
-		notificationsApp.consumeMessages()
+		app.consumeMessages()
 	}
 	app.Run(os.Args)
 }

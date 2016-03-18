@@ -109,7 +109,7 @@ func (d EventDispatcher) distributeEvents() {
 }
 
 const heartbeatMsg = "[]"
-const heartbeatPeriod = 30
+const heartbeatPeriod = 60
 
 func newTimer() *time.Timer {
 	return time.NewTimer(heartbeatPeriod * time.Second)

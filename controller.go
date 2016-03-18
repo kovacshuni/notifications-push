@@ -10,6 +10,7 @@ type controller struct {
 }
 
 func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Pragma", "no-cache")

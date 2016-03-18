@@ -24,7 +24,7 @@ func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
 
 	bw := bufio.NewWriter(w)
 
-	events := make(chan string)
+	events := make(chan string, 16)
 	c.dispatcher.addSubscriber <- events
 	defer func() {
 		c.dispatcher.removeSubscriber <- events

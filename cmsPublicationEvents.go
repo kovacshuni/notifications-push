@@ -1,7 +1,7 @@
 package main
 
 type cmsPublicationEvent struct {
-	ContentUri   string
+	ContentURI   string
 	UUID         string
 	Payload      string
 	LastModified string

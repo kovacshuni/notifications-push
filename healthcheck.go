@@ -4,22 +4,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"github.com/Financial-Times/go-fthealth"
 	"github.com/Financial-Times/message-queue-gonsumer/consumer"
+	"io/ioutil"
+	"net/http"
 )
 
-type Healthcheck struct {
+type healthcheck struct {
 	client       http.Client
 	consumerConf consumer.QueueConfig
 }
 
-func (h *Healthcheck) healthcheck() func(w http.ResponseWriter, r *http.Request) {
+func (h *healthcheck) healthcheck() func(w http.ResponseWriter, r *http.Request) {
 	return fthealth.HandlerParallel("Dependent services healthcheck", "Checks if all the dependent services are reachable and healthy.", h.messageQueueProxyReachable())
 }
 
-func (h *Healthcheck) gtg(writer http.ResponseWriter, req *http.Request) {
+func (h *healthcheck) gtg(writer http.ResponseWriter, req *http.Request) {
 	healthChecks := []func() error{h.checkAggregateMessageQueueProxiesReachable}
 
 	for _, hCheck := range healthChecks {
@@ -30,7 +30,7 @@ func (h *Healthcheck) gtg(writer http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *Healthcheck) messageQueueProxyReachable() fthealth.Check {
+func (h *healthcheck) messageQueueProxyReachable() fthealth.Check {
 	return fthealth.Check{
 		BusinessImpact:   "Notifications about newly modified/published content will not reach this app, nor will they reach its clients.",
 		Name:             "MessageQueueProxyReachable",
@@ -42,7 +42,7 @@ func (h *Healthcheck) messageQueueProxyReachable() fthealth.Check {
 
 }
 
-func (h *Healthcheck) checkAggregateMessageQueueProxiesReachable() error {
+func (h *healthcheck) checkAggregateMessageQueueProxiesReachable() error {
 	errMsg := ""
 	for i := 0; i < len(h.consumerConf.Addrs); i++ {
 		err := h.checkMessageQueueProxyReachable(h.consumerConf.Addrs[i], h.consumerConf.Topic, h.consumerConf.AuthorizationKey, h.consumerConf.Queue)
@@ -54,7 +54,7 @@ func (h *Healthcheck) checkAggregateMessageQueueProxiesReachable() error {
 	return errors.New(errMsg)
 }
 
-func (h *Healthcheck) checkMessageQueueProxyReachable(address string, topic string, authKey string, queue string) error {
+func (h *healthcheck) checkMessageQueueProxyReachable(address string, topic string, authKey string, queue string) error {
 	req, err := http.NewRequest("GET", address+"/topics", nil)
 	if err != nil {
 		warnLogger.Printf("Could not connect to proxy: %v", err.Error())

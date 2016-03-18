@@ -9,7 +9,7 @@ import (
 	"syscall"
 )
 
-func (n NotificationsApp) consumeMessages() {
+func (n notificationsApp) consumeMessages() {
 	infoLogger.Println("Entered consumeMessages() function.")
 	consumerConfig := n.consumerConfig
 

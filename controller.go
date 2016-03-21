@@ -55,9 +55,9 @@ func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
 }
 
 func buildSubscriber(header http.Header) subscriber {
-	addrs := strings.Split(header.Get("X-Forward-For"), ",")
+	addrs := strings.Split(header.Get("X-Forwarded-For"), ",")
 	return subscriber{
-		addr:  addrs[0] + ":" + header.Get("X-Forward-Port"),
+		addr:  addrs[0] + ":" + header.Get("X-Forwarded-Port"),
 		since: time.Now(),
 	}
 }

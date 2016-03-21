@@ -8,8 +8,8 @@ import (
 
 func TestBuildSubscriber(t *testing.T) {
 	testHeaders := http.Header{}
-	testHeaders["X-Forward-For"] = []string{"1.2.3.4", "5.6.7.8"}
-	testHeaders["X-Forward-Port"] = []string{"12345"}
+	testHeaders["X-Forwarded-For"] = []string{"1.2.3.4", "5.6.7.8"}
+	testHeaders["X-Forwarded-Port"] = []string{"12345"}
 
 	subscriber := buildSubscriber(testHeaders)
 

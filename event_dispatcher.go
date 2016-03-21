@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"regexp"
 	"strings"
@@ -13,15 +14,15 @@ import (
 type eventDispatcher struct {
 	incoming         chan string
 	subscribers      map[chan string]subscriber
-	addSubscriber    chan chan string
-	removeSubscriber chan chan string
+	addSubscriber    chan subscriberEvent
+	removeSubscriber chan subscriberEvent
 }
 
 func newEvents() *eventDispatcher {
 	incoming := make(chan string)
 	subscribers := make(map[chan string]subscriber)
-	addSubscriber := make(chan chan string)
-	removeSubscriber := make(chan chan string)
+	addSubscriber := make(chan subscriberEvent)
+	removeSubscriber := make(chan subscriberEvent)
 	return &eventDispatcher{incoming, subscribers, addSubscriber, removeSubscriber}
 }
 
@@ -31,7 +32,15 @@ type notification struct {
 	Type   string `json:"type"`
 }
 
-type subscriber struct{}
+type subscriberEvent struct {
+	ch         chan string
+	subscriber subscriber
+}
+
+type subscriber struct {
+	addr  string
+	since time.Time
+}
 
 var whitelist = regexp.MustCompile("^http://(methode-article|wordpress-article)-transformer-(pr|iw)-uk-.*\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$")
 
@@ -89,29 +98,29 @@ func (d eventDispatcher) distributeEvents() {
 	for {
 		select {
 		case msg := <-d.incoming:
-			for sub := range d.subscribers {
+			for subCh, sub := range d.subscribers {
 				select {
-				case sub <- msg:
+				case subCh <- msg:
 				default:
-					warnLogger.Println("Subscriber lagging behind")
+					warnLogger.Printf("Subscriber [%v] lagging behind.", sub)
 				}
 			}
 			resetTimer(heartbeat)
 		case <-heartbeat.C:
-			for sub := range d.subscribers {
+			for subCh, sub := range d.subscribers {
 				select {
-				case sub <- heartbeatMsg:
+				case subCh <- heartbeatMsg:
 				default:
-					warnLogger.Println("Subscriber lagging behind when sending heartbeat.")
+					warnLogger.Printf("Subscriber [%v] lagging behind when sending heartbeat.", sub)
 				}
 			}
 			resetTimer(heartbeat)
 		case s := <-d.addSubscriber:
-			log.Printf("New subscriber")
-			d.subscribers[s] = subscriber{}
+			log.Printf("New subscriber [%s].", s.subscriber.addr)
+			d.subscribers[s.ch] = s.subscriber
 		case s := <-d.removeSubscriber:
-			delete(d.subscribers, s)
-			log.Printf("Subscriber left")
+			delete(d.subscribers, s.ch)
+			log.Printf("Subscriber [%s] left.", s.subscriber)
 		}
 	}
 }
@@ -121,4 +130,8 @@ const heartbeatPeriod = 60
 
 func resetTimer(timer *time.Timer) {
 	timer.Reset(heartbeatPeriod * time.Second)
+}
+
+func (s subscriber) String() string {
+	return fmt.Sprintf("Addr: [%s]. Since: [%s]. Connection duration: [%s].", s.addr, s.since.Format(time.StampMilli), time.Since(s.since))
 }

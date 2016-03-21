@@ -87,7 +87,9 @@ func main() {
 
 		app.consumeMessages()
 	}
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		errorLogger.Fatal(err)
+	}
 }
 
 func initLogs(infoHandle io.Writer, warnHandle io.Writer, errorHandle io.Writer) {

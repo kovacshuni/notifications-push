@@ -71,10 +71,12 @@ func (d eventDispatcher) receiveEvents(msg consumer.Message) {
 		return
 	}
 
-	//wait 30sec for the content to be ingested before notifying the clients
-	time.Sleep(30 * time.Second)
+	go func() {
+		//wait 30sec for the content to be ingested before notifying the clients
+		time.Sleep(30 * time.Second)
 
-	d.incoming <- string(bytes[:])
+		d.incoming <- string(bytes[:])
+	}()
 }
 
 func buildNotification(cmsPubEvent cmsPublicationEvent) *notification {

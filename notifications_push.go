@@ -68,7 +68,6 @@ func main() {
 		consumerConfig.Topic = *topic
 		consumerConfig.AuthorizationKey = *consumerAuthorizationKey
 		consumerConfig.AutoCommitEnable = *consumerAutoCommitEnable
-		consumerConfig.ConcurrentProcessing = true
 
 		infoLogger.Printf("Consumer config: [%#v]", consumerConfig)
 		c := controller{dispatcher}

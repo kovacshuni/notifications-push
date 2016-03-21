@@ -10,7 +10,6 @@ import (
 )
 
 func (n notificationsApp) consumeMessages() {
-	infoLogger.Println("Entered consumeMessages() function.")
 	consumerConfig := n.consumerConfig
 
 	consumer := queueConsumer.NewConsumer(*consumerConfig, n.eventDispatcher.receiveEvents, http.Client{})

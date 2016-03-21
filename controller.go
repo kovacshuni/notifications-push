@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"net/http"
+	"strings"
+	"time"
 )
 
 type controller struct {
@@ -25,9 +27,10 @@ func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
 	bw := bufio.NewWriter(w)
 
 	events := make(chan string, 16)
-	c.dispatcher.addSubscriber <- events
+	subscriberEvent := subscriberEvent{ch: events, subscriber: buildSubscriber(r.Header)}
+	c.dispatcher.addSubscriber <- subscriberEvent
 	defer func() {
-		c.dispatcher.removeSubscriber <- events
+		c.dispatcher.removeSubscriber <- subscriberEvent
 	}()
 
 	for {
@@ -48,5 +51,13 @@ func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
 			flusher := w.(http.Flusher)
 			flusher.Flush()
 		}
+	}
+}
+
+func buildSubscriber(header http.Header) subscriber {
+	addrs := strings.Split(header.Get("X-Forwarded-For"), ",")
+	return subscriber{
+		addr:  addrs[0] + ":" + header.Get("X-Forwarded-Port"),
+		since: time.Now(),
 	}
 }

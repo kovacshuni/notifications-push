@@ -118,11 +118,11 @@ func (d eventDispatcher) distributeEvents() {
 			}
 			resetTimer(heartbeat)
 		case s := <-d.addSubscriber:
-			log.Printf("New subscriber [%s].", s.subscriber.addr)
+			log.Printf("INFO - New subscriber [%s].", s.subscriber.addr)
 			d.subscribers[s.ch] = s.subscriber
 		case s := <-d.removeSubscriber:
 			delete(d.subscribers, s.ch)
-			log.Printf("Subscriber [%s] left.", s.subscriber)
+			log.Printf("INFO - Subscriber [%s] left.", s.subscriber)
 		}
 	}
 }

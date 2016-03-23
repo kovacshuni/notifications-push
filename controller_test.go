@@ -52,7 +52,7 @@ func TestHTTPEndpoints_IntegrationTest(t *testing.T) {
 	defer ts.Close()
 	t.Logf("Server url: [%v]", ts.URL)
 	for i := 0; i < 10; i++ {
-		go testRequest(ts.URL + "/notifications")
+		go testRequest(ts.URL + "/content/notifications")
 	}
 	time.Sleep(time.Second)
 	res, err := http.Get(ts.URL + "/stats")

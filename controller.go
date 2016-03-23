@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -30,8 +31,8 @@ func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
 	subscriberEvent := subscriberEvent{
 		ch: events,
 		subscriber: subscriber{
-			addr:  getClientAddr(r),
-			since: time.Now(),
+			Addr:  getClientAddr(r),
+			Since: time.Now(),
 		},
 	}
 	c.dispatcher.addSubscriber <- subscriberEvent
@@ -67,4 +68,28 @@ func getClientAddr(r *http.Request) string {
 		return addr[0]
 	}
 	return r.RemoteAddr
+}
+
+type stats struct {
+	NrOfSubscribers int          `json:"nrOfSubscribers"`
+	Subscribers     []subscriber `json:"subscribers"`
+}
+
+func (c controller) stats(w http.ResponseWriter, r *http.Request) {
+	subscribers := []subscriber{}
+	for _, s := range c.dispatcher.subscribers {
+		subscribers = append(subscribers, s)
+	}
+	stats := stats{
+		NrOfSubscribers: len(c.dispatcher.subscribers),
+		Subscribers:     subscribers,
+	}
+	bytes, err := json.Marshal(stats)
+	if err != nil {
+		warnLogger.Printf("[%v]", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-type", "application/json")
+	w.Write(bytes)
 }

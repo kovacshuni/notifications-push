@@ -38,8 +38,8 @@ type subscriberEvent struct {
 }
 
 type subscriber struct {
-	addr  string
-	since time.Time
+	Addr  string
+	Since time.Time
 }
 
 var whitelist = regexp.MustCompile("^http://(methode-article|wordpress-article)-transformer-(pr|iw)-uk-.*\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$")
@@ -118,7 +118,7 @@ func (d eventDispatcher) distributeEvents() {
 			}
 			resetTimer(heartbeat)
 		case s := <-d.addSubscriber:
-			log.Printf("New subscriber [%s].", s.subscriber.addr)
+			log.Printf("New subscriber [%s].", s.subscriber.Addr)
 			d.subscribers[s.ch] = s.subscriber
 		case s := <-d.removeSubscriber:
 			delete(d.subscribers, s.ch)
@@ -128,12 +128,16 @@ func (d eventDispatcher) distributeEvents() {
 }
 
 const heartbeatMsg = "[]"
-const heartbeatPeriod = 60
+const heartbeatPeriod = 30
 
 func resetTimer(timer *time.Timer) {
 	timer.Reset(heartbeatPeriod * time.Second)
 }
 
 func (s subscriber) String() string {
-	return fmt.Sprintf("Addr: [%s]. Since: [%s]. Connection duration: [%s].", s.addr, s.since.Format(time.StampMilli), time.Since(s.since))
+	return fmt.Sprintf("Addr: [%s]. Since: [%s]. Connection duration: [%s].", s.Addr, s.Since.Format(time.StampMilli), time.Since(s.Since))
+}
+
+func (s subscriber) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`{ "addr" : "%s", "since" : "%s", "connectionDuration": "%s" }`, s.Addr, s.Since.Format(time.StampMilli), time.Since(s.Since))), nil
 }

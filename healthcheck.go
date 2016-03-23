@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Financial-Times/go-fthealth"
-	"github.com/Financial-Times/message-queue-gonsumer/consumer"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/Financial-Times/go-fthealth"
+	"github.com/Financial-Times/message-queue-gonsumer/consumer"
 )
 
 type healthcheck struct {

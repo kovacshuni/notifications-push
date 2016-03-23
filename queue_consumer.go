@@ -1,12 +1,13 @@
 package main
 
 import (
-	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
 )
 
 func (n notificationsApp) consumeMessages() {

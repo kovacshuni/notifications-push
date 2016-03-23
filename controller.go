@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -57,7 +58,31 @@ func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
 func buildSubscriber(header http.Header) subscriber {
 	addrs := strings.Split(header.Get("X-Forwarded-For"), ",")
 	return subscriber{
-		addr:  addrs[0] + ":" + header.Get("X-Forwarded-Port"),
-		since: time.Now(),
+		Addr:  addrs[0] + ":" + header.Get("X-Forwarded-Port"),
+		Since: time.Now(),
 	}
+}
+
+type stats struct {
+	NrOfSubscribers int          `json:"nrOfSubscribers"`
+	Subscribers     []subscriber `json:"subscribers"`
+}
+
+func (c controller) stats(w http.ResponseWriter, r *http.Request) {
+	var subscribers []subscriber
+	for _, s := range c.dispatcher.subscribers {
+		subscribers = append(subscribers, s)
+	}
+	stats := stats{
+		NrOfSubscribers: len(c.dispatcher.subscribers),
+		Subscribers:     subscribers,
+	}
+	bytes, err := json.Marshal(stats)
+	if err != nil {
+		warnLogger.Printf("[%v]", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-type", "application/json")
+	w.Write(bytes)
 }

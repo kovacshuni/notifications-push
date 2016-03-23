@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	_ "io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -49,30 +47,37 @@ func TestHTTPEndpoints_IntegrationTest(t *testing.T) {
 		}
 		controller.stats(w, r)
 	}))
-	defer ts.Close()
-	t.Logf("Server url: [%v]", ts.URL)
-	for i := 0; i < 10; i++ {
-		go testRequest(ts.URL + "/content/notifications")
+	defer func() {
+		ts.Close()
+	}()
+	nrOfRequests := 10
+	for i := 0; i < nrOfRequests; i++ {
+		go testRequest(ts.URL + "/notifications")
 	}
 	time.Sleep(time.Second)
-	res, err := http.Get(ts.URL + "/stats")
+	resp, err := http.Get(ts.URL + "/stats")
 	if err != nil {
 		t.Error(err)
 	}
+	defer resp.Body.Close()
 	var stats map[string]interface{}
-	err = json.NewDecoder(res.Body).Decode(&stats)
+	err = json.NewDecoder(resp.Body).Decode(&stats)
 	if err != nil {
 		t.Error(err)
 	}
-	t.Logf("Stats: [%v]", stats)
-	if stats["nrOfSubscribers"] != 10 {
-		t.Errorf("Expected: [10]. Found: [%v]", stats["nrOfSubscribers"])
+	actualNrOfReqs, ok := stats["nrOfSubscribers"].(float64)
+	if !ok || int(actualNrOfReqs) != nrOfRequests {
+		t.Errorf("Expected: [%v]. Found: [%v]", nrOfRequests, int(actualNrOfReqs))
 	}
 }
 
 func testRequest(url string) {
-	_, err := http.Get(url)
+	resp, err := http.Get(url)
 	if err != nil {
-		log.Println(err)
+		warnLogger.Println(err)
 	}
+	defer func() {
+		time.Sleep(time.Second * 2)
+		resp.Body.Close()
+	}()
 }

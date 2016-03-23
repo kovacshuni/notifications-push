@@ -57,8 +57,6 @@ func main() {
 		EnvVar: "TOPIC",
 	})
 	app.Action = func() {
-		initLogs(os.Stdout, os.Stdout, os.Stderr)
-
 		dispatcher := newEvents()
 		go dispatcher.distributeEvents()
 
@@ -90,6 +88,10 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		errorLogger.Fatal(err)
 	}
+}
+
+func init() {
+	initLogs(os.Stdout, os.Stdout, os.Stderr)
 }
 
 func initLogs(infoHandle io.Writer, warnHandle io.Writer, errorHandle io.Writer) {

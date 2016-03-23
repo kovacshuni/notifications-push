@@ -27,7 +27,13 @@ func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
 	bw := bufio.NewWriter(w)
 
 	events := make(chan string, 16)
-	subscriberEvent := subscriberEvent{ch: events, subscriber: buildSubscriber(r.Header)}
+	subscriberEvent := subscriberEvent{
+		ch: events,
+		subscriber: subscriber{
+			addr:  getClientAddr(r),
+			since: time.Now(),
+		},
+	}
 	c.dispatcher.addSubscriber <- subscriberEvent
 	defer func() {
 		c.dispatcher.removeSubscriber <- subscriberEvent
@@ -54,10 +60,11 @@ func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func buildSubscriber(header http.Header) subscriber {
-	addrs := strings.Split(header.Get("X-Forwarded-For"), ",")
-	return subscriber{
-		addr:  addrs[0] + ":" + header.Get("X-Forwarded-Port"),
-		since: time.Now(),
+func getClientAddr(r *http.Request) string {
+	xForwardedFor := r.Header.Get("X-Forwarded-For")
+	if xForwardedFor != "" {
+		addr := strings.Split(xForwardedFor, ",")
+		return addr[0]
 	}
+	return r.RemoteAddr
 }

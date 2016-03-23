@@ -1,5 +1,7 @@
 # notifications-push
 
+[![Circle CI](https://circleci.com/gh/Financial-Times/notifications-push/tree/master.png?style=shield)](https://circleci.com/gh/Financial-Times/notifications-push/tree/master)
+
 Proactively notifies subscribers about new content publishes/modifications.
 
 ## Build & Run the binary

@@ -62,8 +62,8 @@ func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
 
 func getClientAddr(r *http.Request) string {
 	xForwardedFor := r.Header.Get("X-Forwarded-For")
-	addr := strings.Split(xForwardedFor, ",")
 	if xForwardedFor != "" {
+		addr := strings.Split(xForwardedFor, ",")
 		return addr[0] + ":" + r.Header.Get("X-Forwarded-Port")
 	}
 	return r.RemoteAddr

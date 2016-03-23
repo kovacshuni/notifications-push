@@ -64,7 +64,7 @@ func getClientAddr(r *http.Request) string {
 	xForwardedFor := r.Header.Get("X-Forwarded-For")
 	if xForwardedFor != "" {
 		addr := strings.Split(xForwardedFor, ",")
-		return addr[0] + ":" + r.Header.Get("X-Forwarded-Port")
+		return addr[0]
 	}
 	return r.RemoteAddr
 }

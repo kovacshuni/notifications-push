@@ -16,7 +16,7 @@ go build
 
 ## Use
 
-1. Go to [http://localhost:8080/notifications-push](http://localhost:8080/notifications-push)
+1. Go to [http://localhost:8080/content/notifications-push](http://localhost:8080/content/notifications-push)
 2. You should see a continuously line-by-line streamed response like:
 ```
 []

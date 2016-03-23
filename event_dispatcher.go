@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -118,12 +117,12 @@ func (d eventDispatcher) distributeEvents() {
 			}
 			resetTimer(heartbeat)
 		case s := <-d.addSubscriber:
-			log.Printf("New subscriber [%s].", s.subscriber.Addr)
+			infoLogger.Printf("New subscriber [%s].", s.subscriber.Addr)
 			d.subscribers[s.ch] = s.subscriber
 			s.ch <- heartbeatMsg
 		case s := <-d.removeSubscriber:
 			delete(d.subscribers, s.ch)
-			log.Printf("Subscriber [%s] left.", s.subscriber)
+			infoLogger.Printf("Subscriber [%s] left.", s.subscriber)
 		}
 	}
 }

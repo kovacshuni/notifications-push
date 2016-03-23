@@ -69,7 +69,7 @@ type stats struct {
 }
 
 func (c controller) stats(w http.ResponseWriter, r *http.Request) {
-	var subscribers []subscriber
+	subscribers := []subscriber{}
 	for _, s := range c.dispatcher.subscribers {
 		subscribers = append(subscribers, s)
 	}

@@ -56,6 +56,7 @@ func (d eventDispatcher) receiveEvents(msg consumer.Message) {
 		warnLogger.Printf("Skipping event: tid=[%v], msg=[%v]: [%v].", tid, msg.Body, err)
 		return
 	}
+	uuid := cmsPubEvent.UUID
 	if !whitelist.MatchString(cmsPubEvent.ContentURI) {
 		infoLogger.Printf("Skipping event: tid=[%v]. Invalid contentUri=[%v]", tid, cmsPubEvent.ContentURI)
 		return
@@ -75,7 +76,7 @@ func (d eventDispatcher) receiveEvents(msg consumer.Message) {
 	go func() {
 		//wait 30sec for the content to be ingested before notifying the clients
 		time.Sleep(30 * time.Second)
-
+		infoLogger.Printf("Notifying clients about tid=[%v] uuid=[%v].", tid, uuid)
 		d.incoming <- string(bytes[:])
 	}()
 }

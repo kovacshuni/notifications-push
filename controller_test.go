@@ -31,7 +31,7 @@ func TestGetClientAddr_XForwardedHeadersMissing(t *testing.T) {
 	addr := getClientAddr(testRequest)
 
 	if addr != "10.10.10.10:10101" {
-		t.Error("Expected: [10.10.10.10:10101]. Actual: [%v]", addr)
+		t.Errorf("Expected: [10.10.10.10:10101]. Actual: [%v]", addr)
 	}
 }
 

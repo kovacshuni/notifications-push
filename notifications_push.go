@@ -67,7 +67,7 @@ func main() {
 		consumerConfig.AuthorizationKey = *consumerAuthorizationKey
 		consumerConfig.AutoCommitEnable = *consumerAutoCommitEnable
 
-		infoLogger.Printf("Consumer config: [%#v]", consumerConfig)
+		infoLogger.Printf("Config: [\n\tconsumerAddrs: [%v]\n\tconsumerGroupID: [%v]\n\ttopic: [%v]\n\tconsumerAutoCommitEnable: [%v]\n]", *consumerAddrs, *consumerGroupID, *topic, *consumerAutoCommitEnable)
 		c := controller{dispatcher}
 		hc := &healthcheck{client: http.Client{}, consumerConf: consumerConfig}
 

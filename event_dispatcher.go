@@ -44,29 +44,31 @@ type subscriber struct {
 var whitelist = regexp.MustCompile("^http://(methode-article|wordpress-article)-transformer-(pr|iw)-uk-.*\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$")
 
 func (d eventDispatcher) receiveEvents(msg consumer.Message) {
-	if strings.HasPrefix(msg.Headers["X-Request-Id"], "SYNTH") {
-		return
-	}
-	var cmsPubEvent cmsPublicationEvent
-	err := json.Unmarshal([]byte(msg.Body), &cmsPubEvent)
-	if err != nil {
-		warnLogger.Printf("Skipping cmsPublicationEvent [%v]: [%v].", msg.Body, err)
-		return
-	}
-	if !whitelist.MatchString(cmsPubEvent.ContentURI) {
-		infoLogger.Printf("Skipping msg with contentUri [%v]", cmsPubEvent.ContentURI)
+	tid := msg.Headers["X-Request-Id"]
+	if strings.HasPrefix(tid, "SYNTH") {
 		return
 	}
 
-	//infoLogger.Printf("CmsPublicationEvent with tid [%v] is valid.", msg.Headers["X-Request-Id"])
+	infoLogger.Printf("Received event: tid=[%v].", tid)
+	var cmsPubEvent cmsPublicationEvent
+	err := json.Unmarshal([]byte(msg.Body), &cmsPubEvent)
+	if err != nil {
+		warnLogger.Printf("Skipping event: tid=[%v], msg=[%v]: [%v].", tid, msg.Body, err)
+		return
+	}
+	if !whitelist.MatchString(cmsPubEvent.ContentURI) {
+		infoLogger.Printf("Skipping event: tid=[%v]. Invalid contentUri=[%v]", tid, cmsPubEvent.ContentURI)
+		return
+	}
+
 	n := buildNotification(cmsPubEvent)
 	if n == nil {
-		warnLogger.Printf("Skipping. Cannot build notification for msg: [%#v]", cmsPubEvent)
+		warnLogger.Printf("Skipping event: tid=[%v]. Cannot build notification for msg=[%#v]", tid, cmsPubEvent)
 		return
 	}
 	bytes, err := json.Marshal([]*notification{n})
 	if err != nil {
-		warnLogger.Printf("Skipping notification [%#v]: [%v]", n, err)
+		warnLogger.Printf("Skipping event: tid=[%v]. Notification [%#v]: [%v]", tid, n, err)
 		return
 	}
 
@@ -122,7 +124,7 @@ func (d eventDispatcher) distributeEvents() {
 			s.ch <- heartbeatMsg
 		case s := <-d.removeSubscriber:
 			delete(d.subscribers, s.ch)
-			infoLogger.Printf("Subscriber [%s] left.", s.subscriber)
+			infoLogger.Printf("Subscriber left [%s].", s.subscriber)
 		}
 	}
 }
@@ -135,7 +137,7 @@ func resetTimer(timer *time.Timer) {
 }
 
 func (s subscriber) String() string {
-	return fmt.Sprintf("Addr: [%s]. Since: [%s]. Connection duration: [%s].", s.Addr, s.Since.Format(time.StampMilli), time.Since(s.Since))
+	return fmt.Sprintf("Addr=[%s]. Since=[%s]. Connection duration=[%s].", s.Addr, s.Since.Format(time.StampMilli), time.Since(s.Since))
 }
 
 func (s subscriber) MarshalJSON() ([]byte, error) {

@@ -8,12 +8,14 @@ import (
 	"time"
 )
 
+const evPrefix = "data: "
+
 type controller struct {
 	dispatcher *eventDispatcher
 }
 
 func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-type", "application/json")
+	w.Header().Set("Content-type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Pragma", "no-cache")
@@ -45,7 +47,7 @@ func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
 		case <-cn.CloseNotify():
 			return
 		case event := <-events:
-			_, err := bw.WriteString(event + "\n")
+			_, err := bw.WriteString(evPrefix + event + "\n\n")
 			if err != nil {
 				infoLogger.Printf("[%v]", err)
 				return

@@ -11,18 +11,23 @@ import (
 )
 
 type eventDispatcher struct {
-	incoming         chan string
-	subscribers      map[chan string]subscriber
-	addSubscriber    chan subscriberEvent
-	removeSubscriber chan subscriberEvent
+	incoming            chan string
+	subscribers         map[chan string]subscriber
+	addSubscriber       chan subscriberEvent
+	removeSubscriber    chan subscriberEvent
+	notificationBuilder notificationBuilder
 }
 
-func newEvents() *eventDispatcher {
+type notificationBuilder struct {
+	APIBaseURL string
+}
+
+func newDispatcher(nb notificationBuilder) *eventDispatcher {
 	incoming := make(chan string)
 	subscribers := make(map[chan string]subscriber)
 	addSubscriber := make(chan subscriberEvent)
 	removeSubscriber := make(chan subscriberEvent)
-	return &eventDispatcher{incoming, subscribers, addSubscriber, removeSubscriber}
+	return &eventDispatcher{incoming, subscribers, addSubscriber, removeSubscriber, nb}
 }
 
 type notification struct {
@@ -62,7 +67,7 @@ func (d eventDispatcher) receiveEvents(msg consumer.Message) {
 		return
 	}
 
-	n := buildNotification(cmsPubEvent)
+	n := d.notificationBuilder.buildNotification(cmsPubEvent)
 	if n == nil {
 		warnLogger.Printf("Skipping event: tid=[%v]. Cannot build notification for msg=[%#v]", tid, cmsPubEvent)
 		return
@@ -81,7 +86,7 @@ func (d eventDispatcher) receiveEvents(msg consumer.Message) {
 	}()
 }
 
-func buildNotification(cmsPubEvent cmsPublicationEvent) *notification {
+func (nb notificationBuilder) buildNotification(cmsPubEvent cmsPublicationEvent) *notification {
 	if cmsPubEvent.UUID == "" {
 		return nil
 	}
@@ -93,7 +98,7 @@ func buildNotification(cmsPubEvent cmsPublicationEvent) *notification {
 	return &notification{
 		Type:   "http://www.ft.com/thing/ThingChangeType/" + eventType,
 		ID:     "http://www.ft.com/thing/" + cmsPubEvent.UUID,
-		APIURL: "http://api.ft.com/content/" + cmsPubEvent.UUID,
+		APIURL: nb.APIBaseURL + "/content/" + cmsPubEvent.UUID,
 	}
 }
 

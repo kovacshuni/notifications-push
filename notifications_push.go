@@ -50,6 +50,12 @@ func main() {
 		Desc:   "The authorization key required to UCS access.",
 		EnvVar: "AUTHORIZATION_KEY",
 	})
+	apiBaseURL := app.String(cli.StringOpt{
+		Name:   "api_base_url",
+		Value:  "http://api.ft.com",
+		Desc:   "The API base URL where the content is accessible",
+		EnvVar: "API_BASE_URL",
+	})
 	topic := app.String(cli.StringOpt{
 		Name:   "topic",
 		Value:  "",
@@ -57,7 +63,7 @@ func main() {
 		EnvVar: "TOPIC",
 	})
 	app.Action = func() {
-		dispatcher := newEvents()
+		dispatcher := newDispatcher(notificationBuilder{*apiBaseURL})
 		go dispatcher.distributeEvents()
 
 		consumerConfig := queueConsumer.QueueConfig{}
@@ -67,7 +73,7 @@ func main() {
 		consumerConfig.AuthorizationKey = *consumerAuthorizationKey
 		consumerConfig.AutoCommitEnable = *consumerAutoCommitEnable
 
-		infoLogger.Printf("Config: [\n\tconsumerAddrs: [%v]\n\tconsumerGroupID: [%v]\n\ttopic: [%v]\n\tconsumerAutoCommitEnable: [%v]\n]", *consumerAddrs, *consumerGroupID, *topic, *consumerAutoCommitEnable)
+		infoLogger.Printf("Config: [\n\tconsumerAddrs: [%v]\n\tconsumerGroupID: [%v]\n\ttopic: [%v]\n\tconsumerAutoCommitEnable: [%v]\n\tapiBaseURL: [%v]\n]", *consumerAddrs, *consumerGroupID, *topic, *consumerAutoCommitEnable, *apiBaseURL)
 		c := controller{dispatcher}
 		hc := &healthcheck{client: http.Client{}, consumerConf: consumerConfig}
 

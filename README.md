@@ -9,9 +9,10 @@ Proactively notifies subscribers about new content publishes/modifications.
 How to Build & Run the binary
 -----------------------------
 
-1. Build:
+1. Build and test:
 
         go build
+        go test
 
 2. Run:
 

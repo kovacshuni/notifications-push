@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -35,17 +36,17 @@ func TestGetClientAddr_XForwardedHeadersMissing(t *testing.T) {
 	}
 }
 
-func TestHTTPEndpoints_IntegrationTest(t *testing.T) {
+func TestIntegration_NotificationsPushRequestsServed_NrOfClientsReflectedOnStatsEndpoint(t *testing.T) {
 	//setting up test controller
-	controller := controller{newDispatcher(notificationBuilder{"http://test.api.ft.com"})}
-	go controller.dispatcher.distributeEvents()
+	h := handler{newDispatcher(), newCircularBuffer(1)}
+	go h.dispatcher.distributeEvents()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "notifications") {
-			controller.notifications(w, r)
+			h.notificationsPush(w, r)
 			return
 		}
-		controller.stats(w, r)
+		h.stats(w, r)
 	}))
 	defer func() {
 		ts.Close()
@@ -68,6 +69,33 @@ func TestHTTPEndpoints_IntegrationTest(t *testing.T) {
 	actualNrOfReqs, ok := stats["nrOfSubscribers"].(float64)
 	if !ok || int(actualNrOfReqs) != nrOfRequests {
 		t.Errorf("Expected: [%v]. Found: [%v]", nrOfRequests, int(actualNrOfReqs))
+	}
+}
+
+func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.T) {
+	notifications := []notificationUPP{
+		notificationUPP{PublishReference: "test1"},
+		notificationUPP{PublishReference: "test2"},
+	}
+	cache := newCircularBuffer(2)
+	cache.enqueue(notifications[1])
+	cache.enqueue(notifications[0])
+
+	h := handler{notificationsCache: cache}
+	req, err := http.NewRequest("GET", "http://localhost:8080/notifications", nil)
+	if err != nil {
+		t.Errorf("[%v]", err)
+	}
+	w := httptest.NewRecorder()
+	h.notifications(w, req)
+
+	expected, err := json.Marshal(notifications)
+	if err != nil {
+		t.Errorf("[%v]", err)
+	}
+	actual := w.Body.Bytes()
+	if reflect.DeepEqual(expected, actual) {
+		t.Errorf("Expected: [%v]. Actual: [%v]", expected, actual)
 	}
 }
 

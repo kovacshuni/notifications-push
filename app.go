@@ -20,9 +20,10 @@ var warnLogger *log.Logger
 var errorLogger *log.Logger
 
 type notificationsApp struct {
-	eventDispatcher *eventDispatcher
-	consumerConfig  *queueConsumer.QueueConfig
-	controller      *controller
+	eventDispatcher     *eventDispatcher
+	consumerConfig      *queueConsumer.QueueConfig
+	notificationBuilder notificationBuilder
+	notificationsCache  queue
 }
 
 func main() {
@@ -75,8 +76,14 @@ func main() {
 		Desc:   "application port",
 		EnvVar: "PORT",
 	})
+	nCap := app.Int(cli.IntOpt{
+		Name:   "notifications_capacity",
+		Value:  200,
+		Desc:   "the nr of recent notifications to be saved and returned on the /notifications endpoint",
+		EnvVar: "NOTIFICATIONS_CAPACITY",
+	})
 	app.Action = func() {
-		dispatcher := newDispatcher(notificationBuilder{*apiBaseURL})
+		dispatcher := newDispatcher()
 		go dispatcher.distributeEvents()
 
 		consumerConfig := queueConsumer.QueueConfig{}
@@ -87,22 +94,22 @@ func main() {
 		consumerConfig.AuthorizationKey = *consumerAuthorizationKey
 		consumerConfig.AutoCommitEnable = *consumerAutoCommitEnable
 
-		infoLogger.Printf("Config: [\n\tconsumerAddrs: [%v]\n\tconsumerGroupID: [%v]\n\ttopic: [%v]\n\tconsumerAutoCommitEnable: [%v]\n\tapiBaseURL: [%v]\n]", *consumerAddrs, *consumerGroupID, *topic, *consumerAutoCommitEnable, *apiBaseURL)
-		c := controller{dispatcher}
+		infoLogger.Printf("Config: [\n\tconsumerAddrs: [%v]\n\tconsumerGroupID: [%v]\n\ttopic: [%v]\n\tconsumerAutoCommitEnable: [%v]\n\tapiBaseURL: [%v]\n\tnotifications_capacity: [%v]\n]", *consumerAddrs, *consumerGroupID, *topic, *consumerAutoCommitEnable, *apiBaseURL, *nCap)
+
+		notificationsCache := newCircularBuffer(*nCap)
+		h := handler{dispatcher, notificationsCache}
 		hc := &healthcheck{client: http.Client{}, consumerConf: consumerConfig}
-
-		app := notificationsApp{dispatcher, &consumerConfig, &c}
-
-		http.HandleFunc("/content/notifications-push", c.notifications)
-		http.HandleFunc("/stats", c.stats)
+		http.HandleFunc("/content/notifications-push", h.notificationsPush)
+		http.HandleFunc("/content/notifications", h.notifications)
+		http.HandleFunc("/stats", h.stats)
 		http.HandleFunc("/__health", hc.healthcheck())
 		http.HandleFunc("/__gtg", hc.gtg)
-
 		go func() {
 			err := http.ListenAndServe(":"+strconv.Itoa(*port), nil)
 			errorLogger.Println(err)
 		}()
 
+		app := notificationsApp{dispatcher, &consumerConfig, notificationBuilder{*apiBaseURL}, notificationsCache}
 		app.consumeMessages()
 	}
 	if err := app.Run(os.Args); err != nil {

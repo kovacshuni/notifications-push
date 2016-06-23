@@ -10,11 +10,17 @@ import (
 
 const evPrefix = "data: "
 
-type controller struct {
-	dispatcher *eventDispatcher
+type handler struct {
+	dispatcher         *eventDispatcher
+	notificationsCache queue
 }
 
-func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
+type stats struct {
+	NrOfSubscribers int          `json:"nrOfSubscribers"`
+	Subscribers     []subscriber `json:"subscribers"`
+}
+
+func (h handler) notificationsPush(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Connection", "keep-alive")
@@ -37,9 +43,9 @@ func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
 			Since: time.Now(),
 		},
 	}
-	c.dispatcher.addSubscriber <- subscriberEvent
+	h.dispatcher.addSubscriber <- subscriberEvent
 	defer func() {
-		c.dispatcher.removeSubscriber <- subscriberEvent
+		h.dispatcher.removeSubscriber <- subscriberEvent
 	}()
 
 	for {
@@ -63,27 +69,31 @@ func (c controller) notifications(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getClientAddr(r *http.Request) string {
-	xForwardedFor := r.Header.Get("X-Forwarded-For")
-	if xForwardedFor != "" {
-		addr := strings.Split(xForwardedFor, ",")
-		return addr[0]
+func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-type", "application/json")
+
+	var errMsgPrefix = "Serving /notifications request:"
+
+	bytes, err := json.Marshal(h.notificationsCache.items())
+	if err != nil {
+		warnLogger.Printf(errMsgPrefix, "[%v]", err)
+		http.Error(w, "", http.StatusInternalServerError)
+		return
 	}
-	return r.RemoteAddr
+	_, err = w.Write(bytes)
+	if err != nil {
+		warnLogger.Printf(errMsgPrefix, "[%v]", err)
+		http.Error(w, "", http.StatusInternalServerError)
+	}
 }
 
-type stats struct {
-	NrOfSubscribers int          `json:"nrOfSubscribers"`
-	Subscribers     []subscriber `json:"subscribers"`
-}
-
-func (c controller) stats(w http.ResponseWriter, r *http.Request) {
+func (h handler) stats(w http.ResponseWriter, r *http.Request) {
 	subscribers := []subscriber{}
-	for _, s := range c.dispatcher.subscribers {
+	for _, s := range h.dispatcher.subscribers {
 		subscribers = append(subscribers, s)
 	}
 	stats := stats{
-		NrOfSubscribers: len(c.dispatcher.subscribers),
+		NrOfSubscribers: len(h.dispatcher.subscribers),
 		Subscribers:     subscribers,
 	}
 	bytes, err := json.Marshal(stats)
@@ -94,4 +104,13 @@ func (c controller) stats(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-type", "application/json")
 	w.Write(bytes)
+}
+
+func getClientAddr(r *http.Request) string {
+	xForwardedFor := r.Header.Get("X-Forwarded-For")
+	if xForwardedFor != "" {
+		addr := strings.Split(xForwardedFor, ",")
+		return addr[0]
+	}
+	return r.RemoteAddr
 }

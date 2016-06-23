@@ -39,7 +39,7 @@ How to Use
 
 1. Go to [http://localhost:8080/content/notifications-push](http://localhost:8080/content/notifications-push)
 2. You should see a continuously line-by-line streamed response like:
-```
+
         data: []
         
         data: []
@@ -61,7 +61,6 @@ How to Use
         data: [{"apiUrl":"http://api.ft.com/content/648bda7b-1187-3496-b48e-57ecb14d5b0a","id":"http://www.ft.com/thing/648bda7b-1187-3496-b48e-57ecb14d5b0a","type":"http://www.ft.com/thing/ThingChangeType/UPDATE"}]
 
         data: [{"apiUrl":"http://api.ft.com/content/648bda7b-1187-3496-b48e-57ecb14d5b0a","id":"http://www.ft.com/thing/648bda7b-1187-3496-b48e-57ecb14d5b0a","type":"http://www.ft.com/thing/ThingChangeType/UPDATE"}]
-```
 
 NB. The empty `[]` lines are heartbeats.
 

@@ -16,6 +16,17 @@ type notificationUPP struct {
 	PublishReference string `json:"publishReference"`
 }
 
+type link struct {
+	Href string `json:"href"`
+	Rel  string `json:"rel"`
+}
+
+type notificationsPageUpp struct {
+	RequestUrl    string            `json:"requestUrl"`
+	Notifications []notificationUPP `json:"notifications"`
+	Links         []link            `json:"links"`
+}
+
 func (nb notificationBuilder) buildNotification(cmsPubEvent cmsPublicationEvent) *notification {
 	if cmsPubEvent.UUID == "" {
 		return nil

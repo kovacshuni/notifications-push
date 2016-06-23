@@ -9,10 +9,12 @@ import (
 )
 
 const evPrefix = "data: "
+const errMsgPrefix = "Serving /notifications request: [%v]"
 
 type handler struct {
 	dispatcher         *eventDispatcher
 	notificationsCache queue
+	apiUrlPrefix       string
 }
 
 type stats struct {
@@ -71,18 +73,47 @@ func (h handler) notificationsPush(w http.ResponseWriter, r *http.Request) {
 
 func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-type", "application/json")
+	var pageUpp notificationsPageUpp
+	isEmpty := r.URL.Query().Get("empty")
 
-	var errMsgPrefix = "Serving /notifications request:"
-
-	bytes, err := json.Marshal(h.notificationsCache.items())
+	if isEmpty == "true" {
+		pageUpp = notificationsPageUpp {
+			RequestUrl: h.apiUrlPrefix + r.URL.RequestURI(),
+			Notifications: []notificationUPP{},
+			Links: []link{link{
+				Href: h.apiUrlPrefix + "/content/notifications?empty=true",
+				Rel: "next",
+			}},
+		}
+	} else {
+		it := h.notificationsCache.items()
+		ns := make([]notificationUPP, len(it))
+		for i := range it {
+			original, ok := (it[i]).(*notificationUPP)
+			if ok {
+				ns[i] = *original
+			} else {
+				warnLogger.Printf("Couldn't cast one notification from queue buffer. Skipping: %v", it[i])
+			}
+		}
+		pageUpp = notificationsPageUpp {
+			RequestUrl: h.apiUrlPrefix + r.URL.RequestURI(),
+			Notifications: ns,
+			Links: []link{link{
+				Href: h.apiUrlPrefix + "/content/notifications?empty=true",
+				Rel: "next",
+			}},
+		}
+	}
+	bytes, err := json.Marshal(pageUpp)
 	if err != nil {
-		warnLogger.Printf(errMsgPrefix, "[%v]", err)
+		warnLogger.Printf(errMsgPrefix, err)
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
 	_, err = w.Write(bytes)
 	if err != nil {
-		warnLogger.Printf(errMsgPrefix, "[%v]", err)
+		warnLogger.Printf(errMsgPrefix, err)
 		http.Error(w, "", http.StatusInternalServerError)
 	}
 }

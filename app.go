@@ -82,6 +82,12 @@ func main() {
 		Desc:   "the nr of recent notifications to be saved and returned on the /notifications endpoint",
 		EnvVar: "NOTIFICATIONS_CAPACITY",
 	})
+	apiUrlPrefix := app.String(cli.StringOpt{
+		Name:   "apiUrlPrefix",
+		Value:  "http://localhost:8080",
+		Desc:   "the prefix of the url for /content/notifications e.g. https://api.ft.com",
+		EnvVar: "API_URL_PREFIX",
+	})
 	app.Action = func() {
 		dispatcher := newDispatcher()
 		go dispatcher.distributeEvents()
@@ -97,7 +103,7 @@ func main() {
 		infoLogger.Printf("Config: [\n\tconsumerAddrs: [%v]\n\tconsumerGroupID: [%v]\n\ttopic: [%v]\n\tconsumerAutoCommitEnable: [%v]\n\tapiBaseURL: [%v]\n\tnotifications_capacity: [%v]\n]", *consumerAddrs, *consumerGroupID, *topic, *consumerAutoCommitEnable, *apiBaseURL, *nCap)
 
 		notificationsCache := newCircularBuffer(*nCap)
-		h := handler{dispatcher, notificationsCache}
+		h := handler{dispatcher, notificationsCache, *apiUrlPrefix}
 		hc := &healthcheck{client: http.Client{}, consumerConf: consumerConfig}
 		http.HandleFunc("/content/notifications-push", h.notificationsPush)
 		http.HandleFunc("/content/notifications", h.notifications)

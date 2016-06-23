@@ -102,7 +102,7 @@ NB. The empty `[]` lines are heartbeats.
 
 How to Build & Run with Docker
 ------------------------------
-```
+
     docker build -t coco/notifications-push .
 
     docker run --env QUEUE_PROXY_ADDRS="https://kafka-proxy-iw-uk-p-1.glb.ft.com,https://kafka-proxy-iw-uk-p-2.glb.ft.com" \
@@ -110,7 +110,6 @@ How to Build & Run with Docker
         --env AUTHORIZATION_KEY="can't tell, get it by etcdctl get /ft/_credentials/kafka-bridge/authorization_key" \
         --env TOPIC="CmsPublicationEvents" \
         coco/notifications-push
-```
 
 
 Useful Links

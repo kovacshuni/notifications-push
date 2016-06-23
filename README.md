@@ -66,38 +66,38 @@ NB. The empty `[]` lines are heartbeats.
 
 3. Go to [http://localhost:8080/content/notifications](http://localhost:8080/content/notifications)
 4. You should see the last 200 (or some other number) of events like:
-```
-[
-  {
-    "apiUrl": "http://api.ft.com/content/815e74c4-32ea-11e6-bda0-04585c31b153",
-    "id": "http://www.ft.com/thing/815e74c4-32ea-11e6-bda0-04585c31b153",
-    "type": "http://www.ft.com/thing/ThingChangeType/UPDATE",
-    "lastModified": "2016-06-22T17:07:38.442Z",
-    "publishReference": "tid_8bbcyrrs06"
-  },
-  {
-    "apiUrl": "http://api.ft.com/content/28286998-3897-11e6-a780-b48ed7b6126f",
-    "id": "http://www.ft.com/thing/28286998-3897-11e6-a780-b48ed7b6126f",
-    "type": "http://www.ft.com/thing/ThingChangeType/UPDATE",
-    "lastModified": "2016-06-22T17:59:44.477Z",
-    "publishReference": "tid_1ni36jnvsp"
-  }
-]
-```
+
+    [
+      {
+        "apiUrl": "http://api.ft.com/content/815e74c4-32ea-11e6-bda0-04585c31b153",
+        "id": "http://www.ft.com/thing/815e74c4-32ea-11e6-bda0-04585c31b153",
+        "type": "http://www.ft.com/thing/ThingChangeType/UPDATE",
+        "lastModified": "2016-06-22T17:07:38.442Z",
+        "publishReference": "tid_8bbcyrrs06"
+      },
+      {
+        "apiUrl": "http://api.ft.com/content/28286998-3897-11e6-a780-b48ed7b6126f",
+        "id": "http://www.ft.com/thing/28286998-3897-11e6-a780-b48ed7b6126f",
+        "type": "http://www.ft.com/thing/ThingChangeType/UPDATE",
+        "lastModified": "2016-06-22T17:59:44.477Z",
+        "publishReference": "tid_1ni36jnvsp"
+      }
+    ]
+
 5. Go to [http://localhost:8080/stats](http://localhost:8080/stats)
 6. You should see something like:
-```
-{
-  "nrOfSubscribers": 1,
-  "subscribers": [
+
     {
-      "addr": "127.0.0.1:61047",
-      "since": "Jun 23 13:32:33.502",
-      "connectionDuration": "8m14.226344658s"
+      "nrOfSubscribers": 1,
+      "subscribers": [
+        {
+          "addr": "127.0.0.1:61047",
+          "since": "Jun 23 13:32:33.502",
+          "connectionDuration": "8m14.226344658s"
+        }
+      ]
     }
-  ]
-}
-```
+
 
 How to Build & Run with Docker
 ------------------------------

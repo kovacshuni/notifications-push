@@ -38,7 +38,7 @@ func TestGetClientAddr_XForwardedHeadersMissing(t *testing.T) {
 
 func TestIntegration_NotificationsPushRequestsServed_NrOfClientsReflectedOnStatsEndpoint(t *testing.T) {
 	//setting up test controller
-	h := handler{newDispatcher(), newCircularBuffer(1)}
+	h := handler{newDispatcher(), newCircularBuffer(1), "http://test.api.ft.com"}
 	go h.dispatcher.distributeEvents()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

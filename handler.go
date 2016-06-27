@@ -14,7 +14,7 @@ const errMsgPrefix = "Serving /notifications request: [%v]"
 type handler struct {
 	dispatcher         *eventDispatcher
 	notificationsCache queue
-	apiUrlPrefix       string
+	apiBaseUrl         string
 }
 
 type stats struct {
@@ -78,10 +78,10 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 
 	if isEmpty == "true" {
 		pageUpp = notificationsPageUpp {
-			RequestUrl: h.apiUrlPrefix + r.URL.RequestURI(),
+			RequestUrl: h.apiBaseUrl + r.URL.RequestURI(),
 			Notifications: []notificationUPP{},
 			Links: []link{link{
-				Href: h.apiUrlPrefix + "/content/notifications?empty=true",
+				Href: h.apiBaseUrl + "/content/notifications?empty=true",
 				Rel: "next",
 			}},
 		}
@@ -97,10 +97,10 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		pageUpp = notificationsPageUpp {
-			RequestUrl: h.apiUrlPrefix + r.URL.RequestURI(),
+			RequestUrl: h.apiBaseUrl + r.URL.RequestURI(),
 			Notifications: ns,
 			Links: []link{link{
-				Href: h.apiUrlPrefix + "/content/notifications?empty=true",
+				Href: h.apiBaseUrl + "/content/notifications?empty=true",
 				Rel: "next",
 			}},
 		}

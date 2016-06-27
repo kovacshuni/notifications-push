@@ -74,15 +74,31 @@ func TestIntegration_NotificationsPushRequestsServed_NrOfClientsReflectedOnStats
 
 func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.T) {
 	notifications := []notificationUPP{
-		notificationUPP{PublishReference: "test1"},
-		notificationUPP{PublishReference: "test2"},
+		notificationUPP{
+			PublishReference: "test1",
+			LastModified: "2016-06-27T14:56:00.988Z",
+			notification: notification {
+				APIURL: "http://localhost:8080/content/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
+				ID:     "http://www.ft.com/thing/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
+				Type:   "http://www.ft.com/thing/ThingChangeType/UPDATE",
+			},
+		},
+		notificationUPP{
+			PublishReference: "test2",
+			LastModified: "2016-06-27T14:57:00.988Z",
+			notification: notification {
+				APIURL: "http://localhost:8080/content/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
+				ID:     "http://www.ft.com/thing/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
+				Type:   "http://www.ft.com/thing/ThingChangeType/DELETE",
+			},
+		},
 	}
 	cache := newCircularBuffer(2)
 	cache.enqueue(notifications[1])
 	cache.enqueue(notifications[0])
 
 	h := handler{notificationsCache: cache}
-	req, err := http.NewRequest("GET", "http://localhost:8080/notifications", nil)
+	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications", nil)
 	if err != nil {
 		t.Errorf("[%v]", err)
 	}

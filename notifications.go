@@ -11,7 +11,9 @@ type notification struct {
 }
 
 type notificationUPP struct {
-	notification
+	APIURL           string `json:"apiUrl"`
+	ID               string `json:"id"`
+	Type             string `json:"type"`
 	LastModified     string `json:"lastModified"`
 	PublishReference string `json:"publishReference"`
 }
@@ -58,7 +60,9 @@ func (nb notificationBuilder) buildNotification(cmsPubEvent cmsPublicationEvent)
 
 func buildUPPNotification(n *notification, tid, lastModified string) *notificationUPP {
 	return &notificationUPP{
-		notification:     *n,
+		APIURL:           n.APIURL,
+		ID:               n.ID,
+		Type:             n.Type,
 		LastModified:     lastModified,
 		PublishReference: tid,
 	}

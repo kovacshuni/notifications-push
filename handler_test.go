@@ -75,29 +75,33 @@ func TestIntegration_NotificationsPushRequestsServed_NrOfClientsReflectedOnStats
 func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.T) {
 	notifications := []notificationUPP{
 		notificationUPP{
-			PublishReference: "test1",
-			LastModified: "2016-06-27T14:56:00.988Z",
-			notification: notification {
-				APIURL: "http://localhost:8080/content/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
-				ID:     "http://www.ft.com/thing/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
-				Type:   "http://www.ft.com/thing/ThingChangeType/UPDATE",
-			},
+			"http://localhost:8080/content/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
+			"http://www.ft.com/thing/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
+			"http://www.ft.com/thing/ThingChangeType/UPDATE",
+			"test1",
+			"2016-06-27T14:56:00.988Z",
 		},
 		notificationUPP{
-			PublishReference: "test2",
-			LastModified: "2016-06-27T14:57:00.988Z",
-			notification: notification {
-				APIURL: "http://localhost:8080/content/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
-				ID:     "http://www.ft.com/thing/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
-				Type:   "http://www.ft.com/thing/ThingChangeType/DELETE",
-			},
+			"http://localhost:8080/content/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
+			"http://www.ft.com/thing/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
+			"http://www.ft.com/thing/ThingChangeType/DELETE",
+			"test2",
+			"2016-06-27T14:57:00.988Z",
 		},
 	}
-	cache := newCircularBuffer(2)
-	cache.enqueue(notifications[1])
-	cache.enqueue(notifications[0])
+	page := notificationsPageUpp{
+		RequestUrl:    "http://localhost:8080/content/notifications",
+		Notifications: notifications,
+		Links:         []link{link{
+			Href: "http://localhost:8080/content/notifications?empty=true",
+			Rel:  "next",
+		}},
+	}
 
-	h := handler{notificationsCache: cache}
+	cache := newCircularBuffer(2)
+	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080"}
+	cache.enqueue(notifications[0])
+	cache.enqueue(notifications[1])
 	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications", nil)
 	if err != nil {
 		t.Errorf("[%v]", err)
@@ -105,13 +109,43 @@ func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.
 	w := httptest.NewRecorder()
 	h.notifications(w, req)
 
-	expected, err := json.Marshal(notifications)
+	expected, err := json.Marshal(page)
 	if err != nil {
 		t.Errorf("[%v]", err)
 	}
-	actual := w.Body.Bytes()
-	if reflect.DeepEqual(expected, actual) {
-		t.Errorf("Expected: [%v]. Actual: [%v]", expected, actual)
+	expectedS := string(expected)
+	actual := w.Body.String()
+	if !reflect.DeepEqual(expectedS, actual) {
+		t.Errorf("Expected: [%v]. Actual: [%v]", expectedS, actual)
+	}
+}
+
+func TestNotifications_EmptyNextPageIsEmpty(t *testing.T) {
+	page := notificationsPageUpp{
+		RequestUrl:    "http://localhost:8080/content/notifications?empty=true",
+		Notifications: []notificationUPP{},
+		Links:         []link{link{
+			Href: "http://localhost:8080/content/notifications?empty=true",
+			Rel:  "next",
+		}},
+	}
+	cache := newCircularBuffer(10)
+	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080"}
+	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications?empty=true", nil)
+	if err != nil {
+		t.Errorf("[%v]", err)
+	}
+	w := httptest.NewRecorder()
+	h.notifications(w, req)
+
+	expected, err := json.Marshal(page)
+	if err != nil {
+		t.Errorf("[%v]", err)
+	}
+	expectedS := string(expected)
+	actual := w.Body.String()
+	if !reflect.DeepEqual(expectedS, actual) {
+		t.Errorf("Expected: [%v]. Actual: [%v]", expectedS, actual)
 	}
 }
 

@@ -89,9 +89,9 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 		it := h.notificationsCache.items()
 		ns := make([]notificationUPP, len(it))
 		for i := range it {
-			original, ok := (it[i]).(*notificationUPP)
+			original, ok := (it[i]).(notificationUPP)
 			if ok {
-				ns[i] = *original
+				ns[i] = original
 			} else {
 				warnLogger.Printf("Couldn't cast one notification from queue buffer. Skipping: %v", it[i])
 			}

@@ -73,25 +73,24 @@ func TestIntegration_NotificationsPushRequestsServed_NrOfClientsReflectedOnStats
 }
 
 func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.T) {
-	notifications := []notificationUPP{
-		notificationUPP{
-			"http://localhost:8080/content/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
-			"http://www.ft.com/thing/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
-			"http://www.ft.com/thing/ThingChangeType/UPDATE",
-			"test1",
-			"2016-06-27T14:56:00.988Z",
-		},
-		notificationUPP{
-			"http://localhost:8080/content/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
-			"http://www.ft.com/thing/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
-			"http://www.ft.com/thing/ThingChangeType/DELETE",
-			"test2",
-			"2016-06-27T14:57:00.988Z",
-		},
+	not0 := notificationUPP{
+		"http://localhost:8080/content/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
+		"http://www.ft.com/thing/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
+		"http://www.ft.com/thing/ThingChangeType/UPDATE",
+		"test1",
+		"2016-06-27T14:56:00.988Z",
 	}
+	not1 := notificationUPP{
+		"http://localhost:8080/content/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
+		"http://www.ft.com/thing/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
+		"http://www.ft.com/thing/ThingChangeType/DELETE",
+		"test2",
+		"2016-06-27T14:57:00.988Z",
+	}
+	notificationConcreteStructs := []notificationUPP{not0, not1}
 	page := notificationsPageUpp{
 		RequestUrl:    "http://localhost:8080/content/notifications",
-		Notifications: notifications,
+		Notifications: notificationConcreteStructs,
 		Links:         []link{link{
 			Href: "http://localhost:8080/content/notifications?empty=true",
 			Rel:  "next",
@@ -100,8 +99,8 @@ func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.
 
 	cache := newCircularBuffer(2)
 	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080"}
-	cache.enqueue(notifications[0])
-	cache.enqueue(notifications[1])
+	cache.enqueue(&not0)
+	cache.enqueue(&not1)
 	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications", nil)
 	if err != nil {
 		t.Errorf("[%v]", err)

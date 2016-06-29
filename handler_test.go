@@ -38,7 +38,7 @@ func TestGetClientAddr_XForwardedHeadersMissing(t *testing.T) {
 
 func TestIntegration_NotificationsPushRequestsServed_NrOfClientsReflectedOnStatsEndpoint(t *testing.T) {
 	//setting up test controller
-	h := handler{newDispatcher(), newCircularBuffer(1)}
+	h := handler{newDispatcher(), newCircularBuffer(1), "http://test.api.ft.com"}
 	go h.dispatcher.distributeEvents()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -73,29 +73,78 @@ func TestIntegration_NotificationsPushRequestsServed_NrOfClientsReflectedOnStats
 }
 
 func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.T) {
-	notifications := []notificationUPP{
-		notificationUPP{PublishReference: "test1"},
-		notificationUPP{PublishReference: "test2"},
+	not0 := notificationUPP{
+		"http://localhost:8080/content/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
+		"http://www.ft.com/thing/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
+		"http://www.ft.com/thing/ThingChangeType/UPDATE",
+		"test1",
+		"2016-06-27T14:56:00.988Z",
 	}
-	cache := newCircularBuffer(2)
-	cache.enqueue(notifications[1])
-	cache.enqueue(notifications[0])
+	not1 := notificationUPP{
+		"http://localhost:8080/content/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
+		"http://www.ft.com/thing/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
+		"http://www.ft.com/thing/ThingChangeType/DELETE",
+		"test2",
+		"2016-06-27T14:57:00.988Z",
+	}
+	notificationConcreteStructs := []notificationUPP{not0, not1}
+	page := notificationsPageUpp{
+		RequestUrl:    "http://localhost:8080/content/notifications",
+		Notifications: notificationConcreteStructs,
+		Links:         []link{link{
+			Href: "http://localhost:8080/content/notifications?empty=true",
+			Rel:  "next",
+		}},
+	}
 
-	h := handler{notificationsCache: cache}
-	req, err := http.NewRequest("GET", "http://localhost:8080/notifications", nil)
+	cache := newCircularBuffer(2)
+	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080"}
+	cache.enqueue(&not0)
+	cache.enqueue(&not1)
+	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications", nil)
 	if err != nil {
 		t.Errorf("[%v]", err)
 	}
 	w := httptest.NewRecorder()
 	h.notifications(w, req)
 
-	expected, err := json.Marshal(notifications)
+	expected, err := json.Marshal(page)
 	if err != nil {
 		t.Errorf("[%v]", err)
 	}
-	actual := w.Body.Bytes()
-	if reflect.DeepEqual(expected, actual) {
-		t.Errorf("Expected: [%v]. Actual: [%v]", expected, actual)
+	expectedS := string(expected)
+	actual := w.Body.String()
+	if !reflect.DeepEqual(expectedS, actual) {
+		t.Errorf("Expected: [%v]. Actual: [%v]", expectedS, actual)
+	}
+}
+
+func TestNotifications_EmptyNextPageIsEmpty(t *testing.T) {
+	page := notificationsPageUpp{
+		RequestUrl:    "http://localhost:8080/content/notifications?empty=true",
+		Notifications: []notificationUPP{},
+		Links:         []link{link{
+			Href: "http://localhost:8080/content/notifications?empty=true",
+			Rel:  "next",
+		}},
+	}
+	cache := newCircularBuffer(10)
+	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080"}
+	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications?empty=true", nil)
+	if err != nil {
+		t.Errorf("[%v]", err)
+	}
+	w := httptest.NewRecorder()
+	h.notifications(w, req)
+
+	expected, err := json.Marshal(page)
+	if err != nil {
+		t.Errorf("[%v]", err)
+	}
+	expectedS := string(expected)
+	actual := w.Body.String()
+	if !reflect.DeepEqual(expectedS, actual) {
+		t.Errorf("Expected: [%v]. Actual: [%v]", expectedS, actual)
 	}
 }
 

@@ -81,7 +81,7 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 			RequestUrl: h.apiBaseUrl + r.URL.RequestURI(),
 			Notifications: []notificationUPP{},
 			Links: []link{link{
-				Href: h.apiBaseUrl + "/content/notifications?empty=true",
+				Href: h.apiBaseUrl + "/__notifications-push/content/notifications?empty=true",
 				Rel: "next",
 			}},
 		}
@@ -101,7 +101,7 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 			RequestUrl: h.apiBaseUrl + r.URL.RequestURI(),
 			Notifications: ns,
 			Links: []link{link{
-				Href: h.apiBaseUrl + "/content/notifications?empty=true",
+				Href: h.apiBaseUrl + "/__notifications-push/content/notifications?empty=true",
 				Rel: "next",
 			}},
 		}

@@ -14,14 +14,14 @@ func TestNewCircularBuffer(t *testing.T) {
 	}
 }
 
-func TestEnqueue_EnqueuingSizePlusOneNrOfItems_CapacityDoesNotChange(t *testing.T) {
+func TestEnqueue_EnqueuingSizePlusOneNrOfItems_LengthDoesNotOverflow(t *testing.T) {
 	cb := newCircularBuffer(2)
 	cb.enqueue(1)
 	cb.enqueue(2)
 	cb.enqueue(3)
 
-	if cap(cb.items()) != 2 {
-		t.Errorf("Expected capacity to not change. Actual: [%d]", 2)
+	if len(cb.items()) != 2 {
+		t.Errorf("Expected length to not change. Actual: [%d]", len(cb.items()))
 	}
 }
 

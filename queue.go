@@ -11,18 +11,22 @@ type queue interface {
 }
 
 type circularBuffer struct {
-	mutex  *sync.Mutex
-	buffer []item
+	mutex    *sync.Mutex
+	buffer   []item
+	capacity int
 }
 
 func newCircularBuffer(capacity int) queue {
-	return &circularBuffer{&sync.Mutex{}, make([]item, 0, capacity)}
+	return &circularBuffer{&sync.Mutex{}, make([]item, 0, capacity), capacity}
 }
 
 func (cb *circularBuffer) enqueue(i item) {
 	cb.mutex.Lock()
-	if cb.isFull() {
-		cb.dequeue()
+	overflow := len(cb.buffer) - cb.capacity
+	if (overflow >= 0) {
+		for j := 0; j <= overflow; j++ {
+			cb.dequeue()
+		}
 	}
 	cb.buffer = append(cb.buffer, i)
 	cb.mutex.Unlock()
@@ -32,6 +36,7 @@ func (cb *circularBuffer) dequeue() item {
 	if len(cb.buffer) > 0 {
 		i := cb.buffer[0]
 		cb.buffer = cb.buffer[1:]
+		infoLogger.Printf("inside buffer lenght is: %v", len(cb.buffer))
 		return i
 	}
 	return nil
@@ -39,8 +44,4 @@ func (cb *circularBuffer) dequeue() item {
 
 func (cb *circularBuffer) items() []item {
 	return cb.buffer
-}
-
-func (cb *circularBuffer) isFull() bool {
-	return len(cb.buffer) == cap(cb.buffer)
 }

@@ -69,7 +69,7 @@ func (app notificationsApp) receiveEvents(msg queueConsumer.Message) {
 		infoLogger.Printf("Notifying clients about tid=[%v] uuid=[%v].", tid, uuid)
 		app.eventDispatcher.incoming <- string(bytes[:])
 
-		uppN := buildUPPNotification(n, tid, msg.Headers["Message-Timestamp"])
+		uppN := buildUPPNotification(n, tid, cmsPubEvent.LastModified)
 		app.notificationsCache.enqueue(uppN)
 	}()
 }

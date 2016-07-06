@@ -36,7 +36,6 @@ func (cb *circularBuffer) dequeue() item {
 	if len(cb.buffer) > 0 {
 		i := cb.buffer[0]
 		cb.buffer = cb.buffer[1:]
-		infoLogger.Printf("inside buffer lenght is: %v", len(cb.buffer))
 		return i
 	}
 	return nil

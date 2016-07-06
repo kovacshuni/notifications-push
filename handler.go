@@ -87,6 +87,7 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		it := h.notificationsCache.items()
+		infoLogger.Printf("number of items: %v", len(it))
 		ns := make([]notificationUPP, len(it))
 		for i := range it {
 			original, ok := (it[i]).(*notificationUPP)

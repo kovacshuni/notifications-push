@@ -60,3 +60,15 @@ func TestDequeue_EnqueuingSizePlusTwoNrOfItems_DequeuingOrderIsPreserved(t *test
 		t.Errorf("Dequeued elements are out of order.")
 	}
 }
+
+func TestDequeue_NoMoreThanCapacity(t *testing.T) {
+	cb := newCircularBuffer(2)
+	cb.enqueue(1)
+	cb.enqueue(2)
+	cb.enqueue(3)
+	cb.enqueue(4)
+
+	if len(cb.items()) != 2 {
+		t.Errorf("Capacity is not maintained.")
+	}
+}

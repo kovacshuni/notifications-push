@@ -78,7 +78,7 @@ func main() {
 	})
 	nCap := app.Int(cli.IntOpt{
 		Name:   "notifications_capacity",
-		Value:  200,
+		Value:  10,
 		Desc:   "the nr of recent notifications to be saved and returned on the /notifications endpoint",
 		EnvVar: "NOTIFICATIONS_CAPACITY",
 	})

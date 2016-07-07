@@ -38,7 +38,7 @@ func TestGetClientAddr_XForwardedHeadersMissing(t *testing.T) {
 
 func TestIntegration_NotificationsPushRequestsServed_NrOfClientsReflectedOnStatsEndpoint(t *testing.T) {
 	//setting up test controller
-	h := handler{newDispatcher(), newCircularBuffer(1), "http://test.api.ft.com"}
+	h := handler{newDispatcher(), newCircularBuffer(1), "http://test.api.ft.com", "http://test.api.ft.com"}
 	go h.dispatcher.distributeEvents()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -92,13 +92,13 @@ func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.
 		RequestUrl:   "http://localhost:8080/content/notifications",
 		Notifications: notificationConcreteStructs,
 		Links:         []link{link{
-			Href: "http://localhost:8080/__notifications-push/content/notifications?empty=true",
+			Href: "http://localhost:8080/content/notifications?empty=true",
 			Rel:  "next",
 		}},
 	}
 
 	cache := newCircularBuffer(2)
-	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080"}
+	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080", notificationsBaseUrl: "http://localhost:8080"}
 	cache.enqueue(&not0)
 	cache.enqueue(&not1)
 	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications", nil)
@@ -121,16 +121,16 @@ func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.
 
 func TestNotifications_EmptyNextPageIsEmpty(t *testing.T) {
 	page := notificationsPageUpp{
-		RequestUrl:    "http://localhost:8080/__notifications-push/content/notifications?empty=true",
+		RequestUrl:    "http://localhost:8080/content/notifications?empty=true",
 		Notifications: []notificationUPP{},
 		Links:         []link{link{
-			Href: "http://localhost:8080/__notifications-push/content/notifications?empty=true",
+			Href: "http://localhost:8080/content/notifications?empty=true",
 			Rel:  "next",
 		}},
 	}
 	cache := newCircularBuffer(10)
-	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080"}
-	req, err := http.NewRequest("GET", "http://localhost:8080/__notifications-push/content/notifications?empty=true", nil)
+	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080", notificationsBaseUrl: "http://localhost:8080"}
+	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications?empty=true", nil)
 	if err != nil {
 		t.Errorf("[%v]", err)
 	}

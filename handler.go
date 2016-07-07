@@ -12,9 +12,10 @@ const evPrefix = "data: "
 const errMsgPrefix = "Serving /notifications request: [%v]"
 
 type handler struct {
-	dispatcher         *eventDispatcher
-	notificationsCache queue
-	apiBaseUrl         string
+	dispatcher           *eventDispatcher
+	notificationsCache   queue
+	apiBaseUrl           string
+	notificationsBaseUrl string
 }
 
 type stats struct {
@@ -81,7 +82,7 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 			RequestUrl: h.apiBaseUrl + r.URL.RequestURI(),
 			Notifications: []notificationUPP{},
 			Links: []link{link{
-				Href: h.apiBaseUrl + "/__notifications-push/content/notifications?empty=true",
+				Href: h.notificationsBaseUrl + "/content/notifications?empty=true",
 				Rel: "next",
 			}},
 		}
@@ -100,7 +101,7 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 			RequestUrl: h.apiBaseUrl + r.URL.RequestURI(),
 			Notifications: ns,
 			Links: []link{link{
-				Href: h.apiBaseUrl + "/__notifications-push/content/notifications?empty=true",
+				Href: h.notificationsBaseUrl + "/content/notifications?empty=true",
 				Rel: "next",
 			}},
 		}

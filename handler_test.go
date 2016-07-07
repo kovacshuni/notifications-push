@@ -89,10 +89,10 @@ func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.
 	}
 	notificationConcreteStructs := []notificationUPP{not0, not1}
 	page := notificationsPageUpp{
-		RequestUrl:    "http://localhost:8080/content/notifications",
+		RequestUrl:   "http://localhost:8080/content/notifications",
 		Notifications: notificationConcreteStructs,
 		Links:         []link{link{
-			Href: "http://localhost:8080/content/notifications?empty=true",
+			Href: "http://localhost:8080/__notifications-push/content/notifications?empty=true",
 			Rel:  "next",
 		}},
 	}
@@ -121,16 +121,16 @@ func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.
 
 func TestNotifications_EmptyNextPageIsEmpty(t *testing.T) {
 	page := notificationsPageUpp{
-		RequestUrl:    "http://localhost:8080/content/notifications?empty=true",
+		RequestUrl:    "http://localhost:8080/__notifications-push/content/notifications?empty=true",
 		Notifications: []notificationUPP{},
 		Links:         []link{link{
-			Href: "http://localhost:8080/content/notifications?empty=true",
+			Href: "http://localhost:8080/__notifications-push/content/notifications?empty=true",
 			Rel:  "next",
 		}},
 	}
 	cache := newCircularBuffer(10)
 	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080"}
-	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications?empty=true", nil)
+	req, err := http.NewRequest("GET", "http://localhost:8080/__notifications-push/content/notifications?empty=true", nil)
 	if err != nil {
 		t.Errorf("[%v]", err)
 	}

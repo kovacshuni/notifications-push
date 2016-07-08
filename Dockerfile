@@ -12,7 +12,9 @@ RUN apk add --update bash \
   && cd $GOPATH/src/${REPO_PATH} \
   && go get -t ./... \
   && go build \
-  && mv notifications-push /notifications-push \
+  && mv notifications-push /notifications-push-app \
+  && rm -rf /notifications-push \
+  && mv /notifications-push-app /notifications-push \
   && apk del go git bzr \
   && rm -rf $GOPATH /var/cache/apk/*
 

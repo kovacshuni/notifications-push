@@ -84,7 +84,7 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 	if isEmpty == "true" {
 		pageUpp = h.createPage([]notificationUPP{}, r.URL.RequestURI())
 	} else {
-		it := (*h.notificationsCache).items()
+		it := h.notificationsCache.items()
 		ns := make([]notificationUPP, len(it))
 		for i := range it {
 			ns[i] = *it[i]

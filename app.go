@@ -23,7 +23,7 @@ type notificationsApp struct {
 	eventDispatcher     *eventDispatcher
 	consumerConfig      *queueConsumer.QueueConfig
 	notificationBuilder notificationBuilder
-	notificationsCache  uniqueue
+	notificationsCache  *uniqueue
 }
 
 func main() {
@@ -109,7 +109,7 @@ func main() {
 			errorLogger.Println(err)
 		}()
 
-		app := notificationsApp{dispatcher, &consumerConfig, notificationBuilder{*apiBaseURL}, notificationsCache}
+		app := notificationsApp{dispatcher, &consumerConfig, notificationBuilder{*apiBaseURL}, &notificationsCache}
 		app.consumeMessages()
 	}
 	if err := app.Run(os.Args); err != nil {

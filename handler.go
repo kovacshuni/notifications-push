@@ -13,8 +13,13 @@ const errMsgPrefix = "Serving /notifications request: [%v]"
 
 type handler struct {
 	dispatcher         *eventDispatcher
-	notificationsCache queue
-	apiBaseUrl         string
+	notificationsCache *uniqueue
+	apiBaseURL         string
+	internalBaseURL    string
+}
+
+func newHandler(dispatcher *eventDispatcher, notificationsCache *uniqueue, apiBaseURL string) handler {
+	return handler{dispatcher, notificationsCache, apiBaseURL, apiBaseURL + "/__notifications-push"}
 }
 
 type stats struct {
@@ -77,33 +82,14 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 	isEmpty := r.URL.Query().Get("empty")
 
 	if isEmpty == "true" {
-		pageUpp = notificationsPageUpp {
-			RequestUrl: h.apiBaseUrl + r.URL.RequestURI(),
-			Notifications: []notificationUPP{},
-			Links: []link{link{
-				Href: h.apiBaseUrl + "/content/notifications?empty=true",
-				Rel: "next",
-			}},
-		}
+		pageUpp = h.createPage([]notificationUPP{}, r.URL.RequestURI())
 	} else {
 		it := h.notificationsCache.items()
 		ns := make([]notificationUPP, len(it))
 		for i := range it {
-			original, ok := (it[i]).(*notificationUPP)
-			if ok {
-				ns[i] = *original
-			} else {
-				warnLogger.Printf("Couldn't cast one notification from queue buffer. Skipping: %v", it[i])
-			}
+			ns[i] = *it[i]
 		}
-		pageUpp = notificationsPageUpp {
-			RequestUrl: h.apiBaseUrl + r.URL.RequestURI(),
-			Notifications: ns,
-			Links: []link{link{
-				Href: h.apiBaseUrl + "/content/notifications?empty=true",
-				Rel: "next",
-			}},
-		}
+		pageUpp = h.createPage(ns, r.URL.RequestURI())
 	}
 	bytes, err := json.Marshal(pageUpp)
 	if err != nil {
@@ -116,6 +102,18 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 		warnLogger.Printf(errMsgPrefix, err)
 		http.Error(w, "", http.StatusInternalServerError)
 	}
+}
+
+func (h handler) createPage(notifications []notificationUPP, requestURI string) notificationsPageUpp {
+	pageUpp := notificationsPageUpp{
+		RequestURL:    h.apiBaseURL + requestURI,
+		Notifications: notifications,
+		Links: []link{link{
+			Href: h.internalBaseURL + "/content/notifications?empty=true",
+			Rel:  "next",
+		}},
+	}
+	return pageUpp
 }
 
 func (h handler) stats(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +132,13 @@ func (h handler) stats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-type", "application/json")
-	w.Write(bytes)
+	b, err := w.Write(bytes)
+	if b == 0 {
+		warnLogger.Printf("Response written to HTTP was empty.")
+	}
+	if err != nil {
+		warnLogger.Printf("Error writing stats to HTTP response: %v", err.Error())
+	}
 }
 
 func getClientAddr(r *http.Request) string {

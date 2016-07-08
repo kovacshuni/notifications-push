@@ -2,33 +2,40 @@ package main
 
 import "sync"
 
-type item interface{}
-
-type queue interface {
-	enqueue(i item)
-	dequeue() item
-	items() []item
+type uniqueue struct {
+	mutex    *sync.Mutex
+	buffer   []*notificationUPP
+	capacity int
 }
 
-type circularBuffer struct {
-	mutex  *sync.Mutex
-	buffer []item
+func newUnique(capacity int) uniqueue {
+	return uniqueue{&sync.Mutex{}, make([]*notificationUPP, 0, capacity), capacity}
 }
 
-func newCircularBuffer(capacity int) queue {
-	return &circularBuffer{&sync.Mutex{}, make([]item, 0, capacity)}
-}
-
-func (cb *circularBuffer) enqueue(i item) {
-	cb.mutex.Lock()
-	if cb.isFull() {
-		cb.dequeue()
+func (cb *uniqueue) enqueue(n *notificationUPP) {
+	wasRemoved := true
+	for wasRemoved {
+		wasRemoved = false
+		for i, e := range cb.buffer {
+			if e.ID == n.ID && e.Type == n.Type {
+				cb.buffer = append(cb.buffer[:i], cb.buffer[i+1:]...)
+				wasRemoved = true
+				break
+			}
+		}
 	}
-	cb.buffer = append(cb.buffer, i)
+	cb.mutex.Lock()
+	overflow := len(cb.buffer) - cb.capacity
+	if overflow >= 0 {
+		for j := 0; j <= overflow; j++ {
+			cb.dequeue()
+		}
+	}
+	cb.buffer = append(cb.buffer, n)
 	cb.mutex.Unlock()
 }
 
-func (cb *circularBuffer) dequeue() item {
+func (cb *uniqueue) dequeue() *notificationUPP {
 	if len(cb.buffer) > 0 {
 		i := cb.buffer[0]
 		cb.buffer = cb.buffer[1:]
@@ -37,10 +44,6 @@ func (cb *circularBuffer) dequeue() item {
 	return nil
 }
 
-func (cb *circularBuffer) items() []item {
+func (cb uniqueue) items() []*notificationUPP {
 	return cb.buffer
-}
-
-func (cb *circularBuffer) isFull() bool {
-	return len(cb.buffer) == cap(cb.buffer)
 }

@@ -38,7 +38,8 @@ func TestGetClientAddr_XForwardedHeadersMissing(t *testing.T) {
 
 func TestIntegration_NotificationsPushRequestsServed_NrOfClientsReflectedOnStatsEndpoint(t *testing.T) {
 	//setting up test controller
-	h := handler{newDispatcher(), newCircularBuffer(1), "http://test.api.ft.com"}
+	queue := newUnique(1)
+	h := newHandler(newDispatcher(), &queue, "http://test.api.ft.com")
 	go h.dispatcher.distributeEvents()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +61,13 @@ func TestIntegration_NotificationsPushRequestsServed_NrOfClientsReflectedOnStats
 	if err != nil {
 		t.Error(err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err = resp.Body.Close()
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+
 	var stats map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&stats)
 	if err != nil {
@@ -89,16 +96,16 @@ func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.
 	}
 	notificationConcreteStructs := []notificationUPP{not0, not1}
 	page := notificationsPageUpp{
-		RequestUrl:    "http://localhost:8080/content/notifications",
+		RequestURL:    "http://test.api.ft.com/content/notifications",
 		Notifications: notificationConcreteStructs,
-		Links:         []link{link{
-			Href: "http://localhost:8080/content/notifications?empty=true",
+		Links: []link{link{
+			Href: "http://test.api.ft.com/__notifications-push/content/notifications?empty=true",
 			Rel:  "next",
 		}},
 	}
 
-	cache := newCircularBuffer(2)
-	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080"}
+	cache := newUnique(2)
+	h := newHandler(nil, &cache, "http://test.api.ft.com")
 	cache.enqueue(&not0)
 	cache.enqueue(&not1)
 	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications", nil)
@@ -121,16 +128,16 @@ func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.
 
 func TestNotifications_EmptyNextPageIsEmpty(t *testing.T) {
 	page := notificationsPageUpp{
-		RequestUrl:    "http://localhost:8080/content/notifications?empty=true",
+		RequestURL:    "http://localhost:8080/__notifications-push/content/notifications?empty=true",
 		Notifications: []notificationUPP{},
-		Links:         []link{link{
-			Href: "http://localhost:8080/content/notifications?empty=true",
+		Links: []link{link{
+			Href: "http://localhost:8080/__notifications-push/content/notifications?empty=true",
 			Rel:  "next",
 		}},
 	}
-	cache := newCircularBuffer(10)
-	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080"}
-	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications?empty=true", nil)
+	cache := newUnique(10)
+	h := newHandler(nil, &cache, "http://localhost:8080")
+	req, err := http.NewRequest("GET", "http://localhost:8080/__notifications-push/content/notifications?empty=true", nil)
 	if err != nil {
 		t.Errorf("[%v]", err)
 	}
@@ -155,6 +162,9 @@ func testRequest(url string) {
 	}
 	defer func() {
 		time.Sleep(time.Second * 2)
-		resp.Body.Close()
+		err = resp.Body.Close()
+		if err != nil {
+			warnLogger.Println(err.Error())
+		}
 	}()
 }

@@ -13,7 +13,9 @@ RUN apk add --update bash \
   && go get -t ./... \
   && go build \
   && mv notifications-push /notifications-push-app \
+  && rm -rf /notifications-push \
+  && mv /notifications-push-app /notifications-push \
   && apk del go git bzr \
   && rm -rf $GOPATH /var/cache/apk/*
 
-CMD [ "/notifications-push-app" ]
+CMD [ "/notifications-push" ]

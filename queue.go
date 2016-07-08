@@ -2,23 +2,23 @@ package main
 
 import "sync"
 
-type queue interface {
+type uniqueue interface {
 	enqueue(*notificationUPP)
 	dequeue() *notificationUPP
 	items() []*notificationUPP
 }
 
-type circularBuffer struct {
+type arrayUniqueue struct {
 	mutex    *sync.Mutex
 	buffer   []*notificationUPP
 	capacity int
 }
 
-func newCircularBuffer(capacity int) queue {
-	return &circularBuffer{&sync.Mutex{}, make([]*notificationUPP, 0, capacity), capacity}
+func newCircularBuffer(capacity int) uniqueue {
+	return &arrayUniqueue{&sync.Mutex{}, make([]*notificationUPP, 0, capacity), capacity}
 }
 
-func (cb *circularBuffer) enqueue(n *notificationUPP) {
+func (cb *arrayUniqueue) enqueue(n *notificationUPP) {
 	wasRemoved := true
 	for wasRemoved {
 		wasRemoved = false
@@ -41,7 +41,7 @@ func (cb *circularBuffer) enqueue(n *notificationUPP) {
 	cb.mutex.Unlock()
 }
 
-func (cb *circularBuffer) dequeue() *notificationUPP {
+func (cb *arrayUniqueue) dequeue() *notificationUPP {
 	if len(cb.buffer) > 0 {
 		i := cb.buffer[0]
 		cb.buffer = cb.buffer[1:]
@@ -50,6 +50,6 @@ func (cb *circularBuffer) dequeue() *notificationUPP {
 	return nil
 }
 
-func (cb *circularBuffer) items() []*notificationUPP {
+func (cb *arrayUniqueue) items() []*notificationUPP {
 	return cb.buffer
 }

@@ -23,7 +23,7 @@ type notificationsApp struct {
 	eventDispatcher     *eventDispatcher
 	consumerConfig      *queueConsumer.QueueConfig
 	notificationBuilder notificationBuilder
-	notificationsCache  queue
+	notificationsCache  uniqueue
 }
 
 func main() {

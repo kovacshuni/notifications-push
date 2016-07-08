@@ -13,7 +13,7 @@ const errMsgPrefix = "Serving /notifications request: [%v]"
 
 type handler struct {
 	dispatcher         *eventDispatcher
-	notificationsCache queue
+	notificationsCache uniqueue
 	apiBaseUrl         string
 	internalBaseUrl    string
 }

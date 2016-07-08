@@ -98,7 +98,7 @@ func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.
 	}
 
 	cache := newCircularBuffer(2)
-	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080", notificationsBaseUrl: "http://localhost:8080"}
+	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080", internalBaseUrl: "http://localhost:8080"}
 	cache.enqueue(&not0)
 	cache.enqueue(&not1)
 	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications", nil)
@@ -129,7 +129,7 @@ func TestNotifications_EmptyNextPageIsEmpty(t *testing.T) {
 		}},
 	}
 	cache := newCircularBuffer(10)
-	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080", notificationsBaseUrl: "http://localhost:8080"}
+	h := handler{notificationsCache: cache, apiBaseUrl: "http://localhost:8080", internalBaseUrl: "http://localhost:8080"}
 	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications?empty=true", nil)
 	if err != nil {
 		t.Errorf("[%v]", err)

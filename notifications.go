@@ -1,6 +1,6 @@
 package main
 
-const ChangeType = "http://www.ft.com/thing/ThingChangeType/"
+const changeType = "http://www.ft.com/thing/ThingChangeType/"
 
 type notificationBuilder struct {
 	APIBaseURL string
@@ -54,7 +54,7 @@ func (nb notificationBuilder) buildNotification(cmsPubEvent cmsPublicationEvent)
 		eventType = "DELETE"
 	}
 	return &notification{
-		Type:   ChangeType + eventType,
+		Type:   changeType + eventType,
 		ID:     "http://www.ft.com/thing/" + cmsPubEvent.UUID,
 		APIURL: nb.APIBaseURL + "/content/" + cmsPubEvent.UUID,
 	}

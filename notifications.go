@@ -26,7 +26,7 @@ type link struct {
 }
 
 type notificationsPageUpp struct {
-	RequestUrl    string            `json:"requestUrl"`
+	RequestURL    string            `json:"requestUrl"`
 	Notifications []notificationUPP `json:"notifications"`
 	Links         []link            `json:"links"`
 }

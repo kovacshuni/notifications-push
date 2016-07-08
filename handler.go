@@ -13,9 +13,13 @@ const errMsgPrefix = "Serving /notifications request: [%v]"
 
 type handler struct {
 	dispatcher         *eventDispatcher
-	notificationsCache uniqueue
-	apiBaseUrl         string
-	internalBaseUrl    string
+	notificationsCache *uniqueue
+	apiBaseURL         string
+	internalBaseURL    string
+}
+
+func newHandler(dispatcher *eventDispatcher, notificationsCache *uniqueue, apiBaseURL string) handler {
+	return handler{dispatcher, notificationsCache, apiBaseURL, apiBaseURL + "/__notifications-push"}
 }
 
 type stats struct {
@@ -78,26 +82,26 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 	isEmpty := r.URL.Query().Get("empty")
 
 	if isEmpty == "true" {
-		pageUpp = notificationsPageUpp {
-			RequestUrl: h.apiBaseUrl + r.URL.RequestURI(),
+		pageUpp = notificationsPageUpp{
+			RequestURL:    h.apiBaseURL + r.URL.RequestURI(),
 			Notifications: []notificationUPP{},
 			Links: []link{link{
-				Href: h.internalBaseUrl + "/content/notifications?empty=true",
-				Rel: "next",
+				Href: h.internalBaseURL + "/content/notifications?empty=true",
+				Rel:  "next",
 			}},
 		}
 	} else {
-		it := h.notificationsCache.items()
+		it := (*h.notificationsCache).items()
 		ns := make([]notificationUPP, len(it))
 		for i := range it {
 			ns[i] = *it[i]
 		}
-		pageUpp = notificationsPageUpp {
-			RequestUrl: h.apiBaseUrl + r.URL.RequestURI(),
+		pageUpp = notificationsPageUpp{
+			RequestURL:    h.apiBaseURL + r.URL.RequestURI(),
 			Notifications: ns,
 			Links: []link{link{
-				Href: h.internalBaseUrl + "/content/notifications?empty=true",
-				Rel: "next",
+				Href: h.internalBaseURL + "/content/notifications?empty=true",
+				Rel:  "next",
 			}},
 		}
 	}
@@ -130,7 +134,13 @@ func (h handler) stats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-type", "application/json")
-	w.Write(bytes)
+	b, err := w.Write(bytes)
+	if b == 0 {
+		warnLogger.Printf("Response written to HTTP was empty.")
+	}
+	if err != nil {
+		warnLogger.Printf("Error writing stats to HTTP response: %v", err.Error())
+	}
 }
 
 func getClientAddr(r *http.Request) string {

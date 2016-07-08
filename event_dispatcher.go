@@ -9,7 +9,7 @@ import (
 const heartbeatMsg = "[]"
 const heartbeatPeriod = 30
 
-var whitelist = regexp.MustCompile("^http://(methode-article|wordpress-article)-transformer-(pr|iw)-uk-.*\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$")
+var whitelist = regexp.MustCompile(`^http://(methode-article|wordpress-article)-transformer-(pr|iw)-uk-.*\.svc\.ft\.com(:\d{2,5})?/(content)/[\w-]+.*$`)
 
 type eventDispatcher struct {
 	incoming         chan string
@@ -41,22 +41,10 @@ func (d eventDispatcher) distributeEvents() {
 	for {
 		select {
 		case msg := <-d.incoming:
-			for subCh, sub := range d.subscribers {
-				select {
-				case subCh <- msg:
-				default:
-					warnLogger.Printf("Subscriber [%v] lagging behind.", sub)
-				}
-			}
+			d.sendMsg(msg)
 			resetTimer(heartbeat)
 		case <-heartbeat.C:
-			for subCh, sub := range d.subscribers {
-				select {
-				case subCh <- heartbeatMsg:
-				default:
-					warnLogger.Printf("Subscriber [%v] lagging behind when sending heartbeat.", sub)
-				}
-			}
+			d.sendHeartBeat()
 			resetTimer(heartbeat)
 		case s := <-d.addSubscriber:
 			infoLogger.Printf("New subscriber [%s].", s.subscriber.Addr)
@@ -65,6 +53,26 @@ func (d eventDispatcher) distributeEvents() {
 		case s := <-d.removeSubscriber:
 			delete(d.subscribers, s.ch)
 			infoLogger.Printf("Subscriber left [%s].", s.subscriber)
+		}
+	}
+}
+
+func (d eventDispatcher) sendMsg(msg string) {
+	for subCh, sub := range d.subscribers {
+		select {
+		case subCh <- msg:
+		default:
+			warnLogger.Printf("Subscriber [%v] lagging behind.", sub)
+		}
+	}
+}
+
+func (d eventDispatcher) sendHeartBeat() {
+	for subCh, sub := range d.subscribers {
+		select {
+		case subCh <- heartbeatMsg:
+		default:
+			warnLogger.Printf("Subscriber [%v] lagging behind when sending heartbeat.", sub)
 		}
 	}
 }

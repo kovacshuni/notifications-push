@@ -4,7 +4,7 @@ import "testing"
 
 func TestNewCircularBuffer(t *testing.T) {
 	maxSize := 5
-	cb := newCircularBuffer(maxSize)
+	cb := newUnique(maxSize)
 	items := cb.items()
 	if len(items) != 0 {
 		t.Errorf("Expected empty buffer. Actual: [%d]", len(items))
@@ -15,7 +15,7 @@ func TestNewCircularBuffer(t *testing.T) {
 }
 
 func TestEnqueue_EnqueuingSizePlusOneNrOfItems_LengthDoesNotOverflow(t *testing.T) {
-	cb := newCircularBuffer(2)
+	cb := newUnique(2)
 	cb.enqueue(&notificationUPP{ID: "1"})
 	cb.enqueue(&notificationUPP{ID: "2"})
 	cb.enqueue(&notificationUPP{ID: "3"})
@@ -26,7 +26,7 @@ func TestEnqueue_EnqueuingSizePlusOneNrOfItems_LengthDoesNotOverflow(t *testing.
 }
 
 func TestEnqueue_EnqueuingSizePlusOneNrOfItems_FirstItemInsertedIsDequeued(t *testing.T) {
-	cb := newCircularBuffer(2)
+	cb := newUnique(2)
 	cb.enqueue(&notificationUPP{ID: "1"})
 	cb.enqueue(&notificationUPP{ID: "2"})
 	cb.enqueue(&notificationUPP{ID: "3"})
@@ -39,7 +39,7 @@ func TestEnqueue_EnqueuingSizePlusOneNrOfItems_FirstItemInsertedIsDequeued(t *te
 }
 
 func TestDequeue_ReadingFromEmptyCircularBuffer_ResultIsNil(t *testing.T) {
-	cb := newCircularBuffer(2)
+	cb := newUnique(2)
 
 	if cb.dequeue() != nil {
 		t.Errorf("Expected getting [nil] from dequeueing an empty list.")
@@ -47,7 +47,7 @@ func TestDequeue_ReadingFromEmptyCircularBuffer_ResultIsNil(t *testing.T) {
 }
 
 func TestDequeue_EnqueuingSizePlusTwoNrOfItems_DequeuingOrderIsPreserved(t *testing.T) {
-	cb := newCircularBuffer(2)
+	cb := newUnique(2)
 	cb.enqueue(&notificationUPP{ID: "1"})
 	cb.enqueue(&notificationUPP{ID: "2"})
 	cb.enqueue(&notificationUPP{ID: "3"})
@@ -62,7 +62,7 @@ func TestDequeue_EnqueuingSizePlusTwoNrOfItems_DequeuingOrderIsPreserved(t *test
 }
 
 func TestDequeue_NoMoreThanCapacity(t *testing.T) {
-	cb := newCircularBuffer(2)
+	cb := newUnique(2)
 	cb.enqueue(&notificationUPP{ID: "1"})
 	cb.enqueue(&notificationUPP{ID: "2"})
 	cb.enqueue(&notificationUPP{ID: "3"})
@@ -74,7 +74,7 @@ func TestDequeue_NoMoreThanCapacity(t *testing.T) {
 }
 
 func TestEnqueue_WontInsertSameID(t *testing.T) {
-	cb := newCircularBuffer(3)
+	cb := newUnique(3)
 	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE"})
 	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: changeType + "UPDATE"})
 	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: changeType + "UPDATE"})
@@ -100,7 +100,7 @@ func TestEnqueue_WontInsertSameID(t *testing.T) {
 }
 
 func TestEnqueue_WillInsertSameIDIfTypeDiffers(t *testing.T) {
-	cb := newCircularBuffer(3)
+	cb := newUnique(3)
 	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE"})
 	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: changeType + "UPDATE"})
 	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: changeType + "UPDATE"})
@@ -112,15 +112,15 @@ func TestEnqueue_WillInsertSameIDIfTypeDiffers(t *testing.T) {
 		t.Errorf("Capacity is not maintained.")
 	}
 	i0 := cb.items()[0]
-	if !(i0.ID == "3" && i0.PublishReference == "c" && i0.Type == changeType + "UPDATE") {
+	if !(i0.ID == "3" && i0.PublishReference == "c" && i0.Type == changeType+"UPDATE") {
 		t.Errorf("Element 0 in items is not correct. Actual: %v", *i0)
 	}
 	i1 := cb.items()[1]
-	if !(i1.ID == "3" && i1.PublishReference == "e" && i1.Type == changeType + "DELETE") {
+	if !(i1.ID == "3" && i1.PublishReference == "e" && i1.Type == changeType+"DELETE") {
 		t.Errorf("Element 1 in items is not correct. Actual: %v", *i1)
 	}
 	i2 := cb.items()[2]
-	if !(i2.ID == "4" && i2.PublishReference == "f" && i2.Type == changeType + "UPDATE") {
+	if !(i2.ID == "4" && i2.PublishReference == "f" && i2.Type == changeType+"UPDATE") {
 		t.Errorf("Element 2 in items is not correct. Actual: %v", *i2)
 	}
 }

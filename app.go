@@ -96,8 +96,8 @@ func main() {
 
 		infoLogger.Printf("Config: [\n\tconsumerAddrs: [%v]\n\tconsumerGroupID: [%v]\n\ttopic: [%v]\n\tconsumerAutoCommitEnable: [%v]\n\tapiBaseURL: [%v]\n\tnotifications_capacity: [%v]\n]", *consumerAddrs, *consumerGroupID, *topic, *consumerAutoCommitEnable, *apiBaseURL, *nCap)
 
-		notificationsCache := newCircularBuffer(*nCap)
-		h := handler{dispatcher, notificationsCache, *apiBaseURL, *apiBaseURL + "/__notifications-push"}
+		notificationsCache := newUnique(*nCap)
+		h := newHandler(dispatcher, &notificationsCache, *apiBaseURL)
 		hc := &healthcheck{client: http.Client{}, consumerConf: consumerConfig}
 		http.HandleFunc("/content/notifications-push", h.notificationsPush)
 		http.HandleFunc("/content/notifications", h.notifications)

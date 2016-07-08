@@ -23,7 +23,7 @@ func (cb *circularBuffer) enqueue(n *notificationUPP) {
 	for wasRemoved {
 		wasRemoved = false
 		for i, e := range cb.buffer {
-			if (e.ID == n.ID) {
+			if (e.ID == n.ID && e.Type == n.Type) {
 				cb.buffer = append(cb.buffer[:i], cb.buffer[i+1:]...)
 				wasRemoved = true
 				break

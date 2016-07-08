@@ -75,12 +75,12 @@ func TestDequeue_NoMoreThanCapacity(t *testing.T) {
 
 func TestEnqueue_WontInsertSameID(t *testing.T) {
 	cb := newCircularBuffer(3)
-	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a"})
-	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b"})
-	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c"})
-	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "d"})
-	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "e"})
-	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "f", })
+	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: ChangeType + "UPDATE"})
+	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: ChangeType + "UPDATE"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: ChangeType + "UPDATE"})
+	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "d", Type: ChangeType + "UPDATE"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "e", Type: ChangeType + "UPDATE"})
+	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "f", Type: ChangeType + "UPDATE"})
 
 	if len(cb.items()) != 3 {
 		t.Errorf("Capacity is not maintained.")
@@ -95,6 +95,32 @@ func TestEnqueue_WontInsertSameID(t *testing.T) {
 	}
 	i2 := cb.items()[2]
 	if !(i2.ID == "4" && i2.PublishReference == "f") {
+		t.Errorf("Element 2 in items is not correct. Actual: %v", *i2)
+	}
+}
+
+func TestEnqueue_WillInsertSameIDIfTypeDiffers(t *testing.T) {
+	cb := newCircularBuffer(3)
+	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: ChangeType + "UPDATE"})
+	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: ChangeType + "UPDATE"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: ChangeType + "UPDATE"})
+	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "d", Type: ChangeType + "UPDATE"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "e", Type: ChangeType + "DELETE"})
+	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "f", Type: ChangeType + "UPDATE"})
+
+	if len(cb.items()) != 3 {
+		t.Errorf("Capacity is not maintained.")
+	}
+	i0 := cb.items()[0]
+	if !(i0.ID == "3" && i0.PublishReference == "c" && i0.Type == ChangeType + "UPDATE") {
+		t.Errorf("Element 0 in items is not correct. Actual: %v", *i0)
+	}
+	i1 := cb.items()[1]
+	if !(i1.ID == "3" && i1.PublishReference == "e" && i1.Type == ChangeType + "DELETE") {
+		t.Errorf("Element 1 in items is not correct. Actual: %v", *i1)
+	}
+	i2 := cb.items()[2]
+	if !(i2.ID == "4" && i2.PublishReference == "f" && i2.Type == ChangeType + "UPDATE") {
 		t.Errorf("Element 2 in items is not correct. Actual: %v", *i2)
 	}
 }

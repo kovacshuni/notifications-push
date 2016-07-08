@@ -82,28 +82,14 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 	isEmpty := r.URL.Query().Get("empty")
 
 	if isEmpty == "true" {
-		pageUpp = notificationsPageUpp{
-			RequestURL:    h.apiBaseURL + r.URL.RequestURI(),
-			Notifications: []notificationUPP{},
-			Links: []link{link{
-				Href: h.internalBaseURL + "/content/notifications?empty=true",
-				Rel:  "next",
-			}},
-		}
+		pageUpp = h.createPage([]notificationUPP{}, r.URL.RequestURI())
 	} else {
 		it := (*h.notificationsCache).items()
 		ns := make([]notificationUPP, len(it))
 		for i := range it {
 			ns[i] = *it[i]
 		}
-		pageUpp = notificationsPageUpp{
-			RequestURL:    h.apiBaseURL + r.URL.RequestURI(),
-			Notifications: ns,
-			Links: []link{link{
-				Href: h.internalBaseURL + "/content/notifications?empty=true",
-				Rel:  "next",
-			}},
-		}
+		pageUpp = h.createPage(ns, r.URL.RequestURI())
 	}
 	bytes, err := json.Marshal(pageUpp)
 	if err != nil {
@@ -116,6 +102,18 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 		warnLogger.Printf(errMsgPrefix, err)
 		http.Error(w, "", http.StatusInternalServerError)
 	}
+}
+
+func (h handler) createPage(notifications []notificationUPP, requestURI string) notificationsPageUpp {
+	pageUpp := notificationsPageUpp{
+		RequestURL:    h.apiBaseURL + requestURI,
+		Notifications: notifications,
+		Links: []link{link{
+			Href: h.internalBaseURL + "/content/notifications?empty=true",
+			Rel:  "next",
+		}},
+	}
+	return pageUpp
 }
 
 func (h handler) stats(w http.ResponseWriter, r *http.Request) {

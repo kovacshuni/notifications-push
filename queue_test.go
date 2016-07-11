@@ -1,6 +1,8 @@
 package main
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestNewCircularBuffer(t *testing.T) {
 	maxSize := 5
@@ -16,9 +18,9 @@ func TestNewCircularBuffer(t *testing.T) {
 
 func TestEnqueue_EnqueuingSizePlusOneNrOfItems_LengthDoesNotOverflow(t *testing.T) {
 	cb := newUnique(2)
-	cb.enqueue(&notificationUPP{ID: "1"})
-	cb.enqueue(&notificationUPP{ID: "2"})
-	cb.enqueue(&notificationUPP{ID: "3"})
+	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE", LastModified: "2016-07-11T13:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: changeType + "UPDATE", LastModified: "2016-07-11T14:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: changeType + "UPDATE", LastModified: "2016-07-11T15:00:00.000Z"})
 
 	if len(cb.items()) != 2 {
 		t.Errorf("Expected length to not change. Actual: [%d]", len(cb.items()))
@@ -27,9 +29,9 @@ func TestEnqueue_EnqueuingSizePlusOneNrOfItems_LengthDoesNotOverflow(t *testing.
 
 func TestEnqueue_EnqueuingSizePlusOneNrOfItems_FirstItemInsertedIsDequeued(t *testing.T) {
 	cb := newUnique(2)
-	cb.enqueue(&notificationUPP{ID: "1"})
-	cb.enqueue(&notificationUPP{ID: "2"})
-	cb.enqueue(&notificationUPP{ID: "3"})
+	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE", LastModified: "2016-07-11T13:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: changeType + "UPDATE", LastModified: "2016-07-11T14:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: changeType + "UPDATE", LastModified: "2016-07-11T15:00:00.000Z"})
 
 	for _, i := range cb.items() {
 		if i.ID == "1" {
@@ -48,10 +50,10 @@ func TestDequeue_ReadingFromEmptyCircularBuffer_ResultIsNil(t *testing.T) {
 
 func TestDequeue_EnqueuingSizePlusTwoNrOfItems_DequeuingOrderIsPreserved(t *testing.T) {
 	cb := newUnique(2)
-	cb.enqueue(&notificationUPP{ID: "1"})
-	cb.enqueue(&notificationUPP{ID: "2"})
-	cb.enqueue(&notificationUPP{ID: "3"})
-	cb.enqueue(&notificationUPP{ID: "4"})
+	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE", LastModified: "2016-07-11T13:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: changeType + "UPDATE", LastModified: "2016-07-11T14:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: changeType + "UPDATE", LastModified: "2016-07-11T15:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "d", Type: changeType + "UPDATE", LastModified: "2016-07-11T16:00:00.000Z"})
 
 	third := cb.dequeue()
 	fourth := cb.dequeue()
@@ -63,10 +65,10 @@ func TestDequeue_EnqueuingSizePlusTwoNrOfItems_DequeuingOrderIsPreserved(t *test
 
 func TestDequeue_NoMoreThanCapacity(t *testing.T) {
 	cb := newUnique(2)
-	cb.enqueue(&notificationUPP{ID: "1"})
-	cb.enqueue(&notificationUPP{ID: "2"})
-	cb.enqueue(&notificationUPP{ID: "3"})
-	cb.enqueue(&notificationUPP{ID: "4"})
+	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE", LastModified: "2016-07-11T13:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: changeType + "UPDATE", LastModified: "2016-07-11T14:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: changeType + "UPDATE", LastModified: "2016-07-11T15:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "d", Type: changeType + "UPDATE", LastModified: "2016-07-11T16:00:00.000Z"})
 
 	if len(cb.items()) != 2 {
 		t.Errorf("Capacity is not maintained.")
@@ -75,25 +77,26 @@ func TestDequeue_NoMoreThanCapacity(t *testing.T) {
 
 func TestEnqueue_WontInsertSameID(t *testing.T) {
 	cb := newUnique(3)
-	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE"})
-	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: changeType + "UPDATE"})
-	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: changeType + "UPDATE"})
-	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "d", Type: changeType + "UPDATE"})
-	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "e", Type: changeType + "UPDATE"})
-	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "f", Type: changeType + "UPDATE"})
+	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE", LastModified: "2016-07-11T13:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: changeType + "UPDATE", LastModified: "2016-07-11T14:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: changeType + "UPDATE", LastModified: "2016-07-11T15:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "d", Type: changeType + "UPDATE", LastModified: "2016-07-11T16:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "e", Type: changeType + "UPDATE", LastModified: "2016-07-11T17:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "f", Type: changeType + "UPDATE", LastModified: "2016-07-11T18:00:00.000Z"})
 
-	if len(cb.items()) != 3 {
-		t.Errorf("Capacity is not maintained.")
+	it := cb.items()
+	if len(it) != 3 {
+		t.Errorf("Capacity is not maintained. %v", len(it))
 	}
-	i0 := cb.items()[0]
+	i0 := it[0]
 	if !(i0.ID == "2" && i0.PublishReference == "b") {
 		t.Errorf("Element 0 in items is not correct. Actual: %v", *i0)
 	}
-	i1 := cb.items()[1]
+	i1 := it[1]
 	if !(i1.ID == "3" && i1.PublishReference == "e") {
 		t.Errorf("Element 1 in items is not correct. Actual: %v", *i1)
 	}
-	i2 := cb.items()[2]
+	i2 := it[2]
 	if !(i2.ID == "4" && i2.PublishReference == "f") {
 		t.Errorf("Element 2 in items is not correct. Actual: %v", *i2)
 	}
@@ -101,12 +104,12 @@ func TestEnqueue_WontInsertSameID(t *testing.T) {
 
 func TestEnqueue_WillInsertSameIDIfTypeDiffers(t *testing.T) {
 	cb := newUnique(3)
-	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE"})
-	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: changeType + "UPDATE"})
-	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: changeType + "UPDATE"})
-	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "d", Type: changeType + "UPDATE"})
-	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "e", Type: changeType + "DELETE"})
-	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "f", Type: changeType + "UPDATE"})
+	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE", LastModified: "2016-07-11T13:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: changeType + "UPDATE", LastModified: "2016-07-11T14:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: changeType + "UPDATE", LastModified: "2016-07-11T15:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "d", Type: changeType + "UPDATE", LastModified: "2016-07-11T16:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "e", Type: changeType + "DELETE", LastModified: "2016-07-11T17:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "f", Type: changeType + "UPDATE", LastModified: "2016-07-11T18:00:00.000Z"})
 
 	if len(cb.items()) != 3 {
 		t.Errorf("Capacity is not maintained.")
@@ -121,6 +124,32 @@ func TestEnqueue_WillInsertSameIDIfTypeDiffers(t *testing.T) {
 	}
 	i2 := cb.items()[2]
 	if !(i2.ID == "4" && i2.PublishReference == "f" && i2.Type == changeType+"UPDATE") {
+		t.Errorf("Element 2 in items is not correct. Actual: %v", *i2)
+	}
+}
+
+func TestEnqueue_KeepsMostRecentEntry(t *testing.T) {
+	cb := newUnique(3)
+	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE", LastModified: "2016-07-11T13:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "2", PublishReference: "b", Type: changeType + "UPDATE", LastModified: "2016-07-11T14:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "c", Type: changeType + "UPDATE", LastModified: "2016-07-11T15:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "d", Type: changeType + "UPDATE", LastModified: "2016-07-11T16:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "3", PublishReference: "e", Type: changeType + "DELETE", LastModified: "2016-07-11T17:00:00.000Z"})
+	cb.enqueue(&notificationUPP{ID: "4", PublishReference: "f", Type: changeType + "UPDATE", LastModified: "2016-07-11T12:00:00.000Z"})
+
+	if len(cb.items()) != 3 {
+		t.Errorf("Capacity is not maintained.")
+	}
+	i0 := cb.items()[0]
+	if !(i0.ID == "3" && i0.PublishReference == "c" && i0.Type == changeType+"UPDATE") {
+		t.Errorf("Element 0 in items is not correct. Actual: %v", *i0)
+	}
+	i1 := cb.items()[1]
+	if !(i1.ID == "4" && i1.PublishReference == "d" && i1.Type == changeType+"UPDATE") {
+		t.Errorf("Element 1 in items is not correct. Actual: %v", *i1)
+	}
+	i2 := cb.items()[2]
+	if !(i2.ID == "3" && i2.PublishReference == "e" && i2.Type == changeType+"DELETE") {
 		t.Errorf("Element 2 in items is not correct. Actual: %v", *i2)
 	}
 }

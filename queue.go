@@ -33,11 +33,9 @@ func (cb *uniqueue) enqueue(n *notificationUPP) {
 				return
 			}
 			if eDate.Before(newestRawDate) {
-				infoLogger.Printf("deleting older not %v", e)
 				cb.buffer = append(cb.buffer[:i], cb.buffer[i+1:]...)
 				break
 			} else {
-				infoLogger.Printf("discarding incoming not %v", n)
 				return
 			}
 		}
@@ -49,7 +47,6 @@ func (cb *uniqueue) enqueue(n *notificationUPP) {
 			cb.dequeue()
 		}
 	}
-	infoLogger.Printf("insrting %v", n)
 	cb.buffer = append(cb.buffer, n)
 	cb.mutex.Unlock()
 }

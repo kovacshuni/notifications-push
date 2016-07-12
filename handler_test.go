@@ -81,18 +81,18 @@ func TestIntegration_NotificationsPushRequestsServed_NrOfClientsReflectedOnStats
 
 func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.T) {
 	not0 := notificationUPP{
-		"http://localhost:8080/content/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
-		"http://www.ft.com/thing/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
-		"http://www.ft.com/thing/ThingChangeType/UPDATE",
-		"test1",
-		"2016-06-27T14:56:00.988Z",
+		APIURL:           "http://localhost:8080/content/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
+		ID:               "http://www.ft.com/thing/16ecb25e-3c63-11e6-8716-a4a71e8140b0",
+		Type:             "http://www.ft.com/thing/ThingChangeType/UPDATE",
+		PublishReference: "test1",
+		LastModified:     "2016-06-27T14:56:00.988Z",
 	}
 	not1 := notificationUPP{
-		"http://localhost:8080/content/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
-		"http://www.ft.com/thing/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
-		"http://www.ft.com/thing/ThingChangeType/DELETE",
-		"test2",
-		"2016-06-27T14:57:00.988Z",
+		APIURL:           "http://localhost:8080/content/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
+		ID:               "http://www.ft.com/thing/26ecb25e-3c63-11e6-8716-a4a71e8140b0",
+		Type:             "http://www.ft.com/thing/ThingChangeType/DELETE",
+		PublishReference: "test2",
+		LastModified:     "2016-06-27T14:57:00.988Z",
 	}
 	notificationConcreteStructs := []notificationUPP{not0, not1}
 	page := notificationsPageUpp{

@@ -1,6 +1,9 @@
 package main
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 type uniqueue struct {
 	mutex    *sync.Mutex
@@ -13,18 +16,32 @@ func newUnique(capacity int) uniqueue {
 }
 
 func (cb *uniqueue) enqueue(n *notificationUPP) {
-	wasRemoved := true
-	for wasRemoved {
-		wasRemoved = false
-		for i, e := range cb.buffer {
-			if e.ID == n.ID && e.Type == n.Type {
+	if n.LastModified == "" || n.Type == "" || n.ID == "" {
+		warnLogger.Printf("Incoming notification must have an ID, a type and a last modified date: %v", n)
+		return
+	}
+	newestRawDate, err := time.Parse(time.RFC3339, n.LastModified)
+	if err != nil {
+		warnLogger.Printf("Incoming notification has malformed date: %v", n.LastModified)
+		return
+	}
+	cb.mutex.Lock()
+	for i, e := range cb.buffer {
+		if e.ID == n.ID && e.Type == n.Type {
+			eDate, err := time.Parse(time.RFC3339Nano, e.LastModified)
+			if err != nil {
+				warnLogger.Printf("Notification in cache has malformed date: %v", n)
+				return
+			}
+			if eDate.Before(newestRawDate) {
 				cb.buffer = append(cb.buffer[:i], cb.buffer[i+1:]...)
-				wasRemoved = true
 				break
+			} else {
+				cb.mutex.Unlock()
+				return
 			}
 		}
 	}
-	cb.mutex.Lock()
 	overflow := len(cb.buffer) - cb.capacity
 	if overflow >= 0 {
 		for j := 0; j <= overflow; j++ {

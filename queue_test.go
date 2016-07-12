@@ -189,3 +189,4 @@ func TestEnqueue_NoType(t *testing.T) {
 		t.Errorf("Element without type shouldn't have been added.")
 	}
 }
+

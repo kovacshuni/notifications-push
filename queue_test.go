@@ -153,3 +153,39 @@ func TestEnqueue_KeepsMostRecentEntry(t *testing.T) {
 		t.Errorf("Element 2 in items is not correct. Actual: %v", *i2)
 	}
 }
+
+func TestEnqueue_NoDate(t *testing.T) {
+	cb := newUnique(3)
+	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE"})
+
+	if len(cb.items()) != 0 {
+		t.Errorf("Element without date shouldn't have been added.")
+	}
+}
+
+func TestEnqueue_MalformedDate(t *testing.T) {
+	cb := newUnique(3)
+	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", Type: changeType + "UPDATE", LastModified: "-07-11T13:00:00.000Z"})
+
+	if len(cb.items()) != 0 {
+		t.Errorf("Element with malformed date shouldn't have been added.")
+	}
+}
+
+func TestEnqueue_NoID(t *testing.T) {
+	cb := newUnique(3)
+	cb.enqueue(&notificationUPP{PublishReference: "a", Type: changeType + "UPDATE", LastModified: "2016-07-11T13:00:00.000Z"})
+
+	if len(cb.items()) != 0 {
+		t.Errorf("Element without ID shouldn't have been added.")
+	}
+}
+
+func TestEnqueue_NoType(t *testing.T) {
+	cb := newUnique(3)
+	cb.enqueue(&notificationUPP{ID: "1", PublishReference: "a", LastModified: "2016-07-11T13:00:00.000Z"})
+
+	if len(cb.items()) != 0 {
+		t.Errorf("Element without type shouldn't have been added.")
+	}
+}

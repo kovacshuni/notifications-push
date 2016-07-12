@@ -16,8 +16,8 @@ func newUnique(capacity int) uniqueue {
 }
 
 func (cb *uniqueue) enqueue(n *notificationUPP) {
-	if n.LastModified == "" {
-		warnLogger.Printf("Incoming notification must have a last modified date: %v", n)
+	if n.LastModified == "" || n.Type == "" || n.ID == "" {
+		warnLogger.Printf("Incoming notification must have an ID, a type and a last modified date: %v", n)
 		return
 	}
 	newestRawDate, err := time.Parse(time.RFC3339, n.LastModified)

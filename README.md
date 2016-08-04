@@ -20,9 +20,11 @@ How to Build & Run the binary
 
     1. via environment variables:
 
-            export QUEUE_PROXY_ADDRS="https://kafka-proxy-iw-uk-p-1.glb.ft.com,https://kafka-proxy-iw-uk-p-2.glb.ft.com" \
-                && export GROUP_ID="notifications-push" \
+            export QUEUE_PROXY_ADDRS="http://ftapp14714-lvpr-uk-t:8080,http://ftapp14721-lvpr-uk-t:8080" \
+                && export GROUP_ID="notifications-push-yourtest" \
                 && export AUTHORIZATION_KEY="$(ssh semantic-tunnel-up.ft.com etcdctl get /ft/_credentials/kafka-bridge/authorization_key)" \
+                && export TOPIC=CmsPublicationEvents \
+                && export API_BASE_URL="http://api.ft.com" \
                 && ./notifications-push
 
     2. or via command-line parameters:
@@ -31,6 +33,7 @@ How to Build & Run the binary
                 --consumer_proxy_addr="https://kafka-proxy-iw-uk-p-1.glb.ft.com,https://kafka-proxy-iw-uk-p-2.glb.ft.com" \
                 --consumer_group_id="notifications-push" \
                 --consumer_authorization_key "$(ssh semantic-tunnel-up.ft.com etcdctl get /ft/_credentials/kafka-bridge/authorization_key)" \
+                --api-base-url="http://api.ft.com" \
                 --topic="CmsPublicationEvents"
 
 
@@ -102,10 +105,11 @@ How to Build & Run with Docker
 
     docker build -t coco/notifications-push .
 
-    docker run --env QUEUE_PROXY_ADDRS="https://kafka-proxy-iw-uk-p-1.glb.ft.com,https://kafka-proxy-iw-uk-p-2.glb.ft.com" \
-        --env GROUP_ID="notifications-push" \
+    docker run --env QUEUE_PROXY_ADDRS="http://ftapp14714-lvpr-uk-t:8080,http://ftapp14721-lvpr-uk-t:8080" \
+        --env GROUP_ID="notifications-push-yourtest" \
         --env AUTHORIZATION_KEY="can't tell, get it by etcdctl get /ft/_credentials/kafka-bridge/authorization_key" \
         --env TOPIC="CmsPublicationEvents" \
+        --env API_BASE_URL="http://api.ft.com" \
         coco/notifications-push
 
 

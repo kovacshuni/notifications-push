@@ -108,8 +108,11 @@ How to Build & Run with Docker
         --env TOPIC="CmsPublicationEvents" \
         coco/notifications-push
 
+Clients
+-------
+
+Example client code is provided in `client` directory
 
 Useful Links
 ------------
-
 * Production: https://prod-up-read.ft.com/content/notifications-push (needs credentials)

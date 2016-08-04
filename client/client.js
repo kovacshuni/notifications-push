@@ -24,7 +24,7 @@ function start(){
 	if(!process.env.PUSH_API_URL){
 		throw new Error('PUSH_API_URL env var missing!');
 	}
-	if(!process.env.COCO_API_AUTHORIZATION){
+	if(!process.env.PUSH_API_AUTHORIZATION){
 		throw new Error('COCO_API_AUTHORIZATION env var missing');
 	}
 
@@ -35,7 +35,7 @@ function start(){
 		process.env.PUSH_API_URL,
 		{
 			headers:{
-				'Authorization' : process.env.COCO_API_AUTHORIZATION
+				'Authorization' : process.env.PUSH_API_AUTHORIZATION
 			}
 		}
 	);
@@ -51,4 +51,5 @@ function start(){
 function stop(){
 	eventSource.close();
 }
+
 start()

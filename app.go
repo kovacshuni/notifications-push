@@ -24,6 +24,7 @@ type notificationsApp struct {
 	consumerConfig      *queueConsumer.QueueConfig
 	notificationBuilder notificationBuilder
 	notificationsCache  *uniqueue
+	delay               int
 }
 
 func main() {
@@ -82,6 +83,13 @@ func main() {
 		Desc:   "the nr of recent notifications to be saved and returned on the /notifications endpoint",
 		EnvVar: "NOTIFICATIONS_CAPACITY",
 	})
+	delay := app.Int(cli.IntOpt{
+		Name:   "notifications_delay",
+		Value:  30,
+		Desc:   "The time to delay each notification before forwarding to any subscribers (in seconds).",
+		EnvVar: "NOTIFICATIONS_DELAY",
+	})
+
 	app.Action = func() {
 		dispatcher := newDispatcher()
 		go dispatcher.distributeEvents()
@@ -109,7 +117,7 @@ func main() {
 			errorLogger.Println(err)
 		}()
 
-		app := notificationsApp{dispatcher, &consumerConfig, notificationBuilder{*apiBaseURL}, &notificationsCache}
+		app := notificationsApp{dispatcher, &consumerConfig, notificationBuilder{*apiBaseURL}, &notificationsCache, *delay}
 		app.consumeMessages()
 	}
 	if err := app.Run(os.Args); err != nil {

@@ -64,8 +64,8 @@ func (app notificationsApp) receiveEvents(msg queueConsumer.Message) {
 	}
 
 	go func() {
-		//wait 30sec for the content to be ingested before notifying the clients
-		time.Sleep(30 * time.Second)
+		// wait for the content to be ingested before notifying the clients. Delay is a CLI arg.
+		time.Sleep(time.Duration(app.delay) * time.Second)
 		infoLogger.Printf("Notifying clients about tid=[%v] uuid=[%v].", tid, uuid)
 		app.eventDispatcher.incoming <- string(bytes[:])
 

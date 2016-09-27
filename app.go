@@ -71,6 +71,12 @@ func main() {
 		Desc:   "Kafka topic to read from.",
 		EnvVar: "TOPIC",
 	})
+	backoff := app.Int(cli.IntOpt{
+		Name:   "backoff",
+		Value:  4,
+		Desc:   "The backoff time for the queue gonsumer.",
+		EnvVar: "CONSUMER_BACKOFF",
+	})
 	port := app.Int(cli.IntOpt{
 		Name:   "port",
 		Value:  8080,
@@ -101,6 +107,7 @@ func main() {
 		consumerConfig.Queue = *consumerHost
 		consumerConfig.AuthorizationKey = *consumerAuthorizationKey
 		consumerConfig.AutoCommitEnable = *consumerAutoCommitEnable
+		consumerConfig.BackoffPeriod = *backoff
 
 		infoLogger.Printf("Config: [\n\tconsumerAddrs: [%v]\n\tconsumerGroupID: [%v]\n\ttopic: [%v]\n\tconsumerAutoCommitEnable: [%v]\n\tapiBaseURL: [%v]\n\tnotifications_capacity: [%v]\n]", *consumerAddrs, *consumerGroupID, *topic, *consumerAutoCommitEnable, *apiBaseURL, *nCap)
 

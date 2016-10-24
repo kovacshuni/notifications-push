@@ -3,7 +3,8 @@ package main
 const changeType = "http://www.ft.com/thing/ThingChangeType/"
 
 type notificationBuilder struct {
-	APIBaseURL string
+	apiBaseURL string
+	resource   string
 }
 
 type notification struct {
@@ -56,7 +57,7 @@ func (nb notificationBuilder) buildNotification(cmsPubEvent cmsPublicationEvent)
 	return &notification{
 		Type:   changeType + eventType,
 		ID:     "http://www.ft.com/thing/" + cmsPubEvent.UUID,
-		APIURL: nb.APIBaseURL + "/content/" + cmsPubEvent.UUID,
+		APIURL: nb.apiBaseURL + "/" + nb.resource + "/" + cmsPubEvent.UUID,
 	}
 }
 
@@ -67,5 +68,16 @@ func buildUPPNotification(n *notification, tid, lastModified string) *notificati
 		Type:             n.Type,
 		LastModified:     lastModified,
 		PublishReference: tid,
+	}
+}
+
+func newNotificationsPageUpp(notifications []notificationUPP, requestURI string, apiBaseURL string, resource string, internalBaseURL string) notificationsPageUpp {
+	return notificationsPageUpp{
+		RequestURL:    apiBaseURL + requestURI,
+		Notifications: notifications,
+		Links: []link{link{
+			Href: internalBaseURL + "/" + resource + "/notifications?empty=true",
+			Rel:  "next",
+		}},
 	}
 }

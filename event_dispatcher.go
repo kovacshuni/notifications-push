@@ -2,14 +2,11 @@ package main
 
 import (
 	"fmt"
-	"regexp"
 	"time"
 )
 
 const heartbeatMsg = "[]"
 const heartbeatPeriod = 30
-
-var whitelist = regexp.MustCompile(`^http://(methode-article|wordpress-article)-transformer-(pr|iw)-uk-.*\.svc\.ft\.com(:\d{2,5})?/(content)/[\w-]+.*$`)
 
 type eventDispatcher struct {
 	incoming         chan string

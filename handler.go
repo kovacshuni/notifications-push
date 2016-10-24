@@ -12,14 +12,15 @@ const evPrefix = "data: "
 const errMsgPrefix = "Serving /notifications request: [%v]"
 
 type handler struct {
+	resource           string
 	dispatcher         *eventDispatcher
 	notificationsCache *uniqueue
 	apiBaseURL         string
 	internalBaseURL    string
 }
 
-func newHandler(dispatcher *eventDispatcher, notificationsCache *uniqueue, apiBaseURL string) handler {
-	return handler{dispatcher, notificationsCache, apiBaseURL, apiBaseURL + "/__notifications-push"}
+func newHandler(resource string, dispatcher *eventDispatcher, notificationsCache *uniqueue, apiBaseURL string) handler {
+	return handler{resource, dispatcher, notificationsCache, apiBaseURL, apiBaseURL + "/__notifications-push"}
 }
 
 type stats struct {
@@ -82,14 +83,14 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 	isEmpty := r.URL.Query().Get("empty")
 
 	if isEmpty == "true" {
-		pageUpp = h.createPage([]notificationUPP{}, r.URL.RequestURI())
+		pageUpp = newNotificationsPageUpp([]notificationUPP{}, r.URL.RequestURI(), h.apiBaseURL, h.resource, h.internalBaseURL)
 	} else {
 		it := h.notificationsCache.items()
 		ns := make([]notificationUPP, len(it))
 		for i := range it {
 			ns[i] = *it[i]
 		}
-		pageUpp = h.createPage(ns, r.URL.RequestURI())
+		pageUpp = newNotificationsPageUpp(ns, r.URL.RequestURI(), h.apiBaseURL, h.resource, h.internalBaseURL)
 	}
 	bytes, err := json.Marshal(pageUpp)
 	if err != nil {
@@ -102,18 +103,6 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 		warnLogger.Printf(errMsgPrefix, err)
 		http.Error(w, "", http.StatusInternalServerError)
 	}
-}
-
-func (h handler) createPage(notifications []notificationUPP, requestURI string) notificationsPageUpp {
-	pageUpp := notificationsPageUpp{
-		RequestURL:    h.apiBaseURL + requestURI,
-		Notifications: notifications,
-		Links: []link{link{
-			Href: h.internalBaseURL + "/content/notifications?empty=true",
-			Rel:  "next",
-		}},
-	}
-	return pageUpp
 }
 
 func (h handler) stats(w http.ResponseWriter, r *http.Request) {

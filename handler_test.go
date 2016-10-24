@@ -39,7 +39,7 @@ func TestGetClientAddr_XForwardedHeadersMissing(t *testing.T) {
 func TestIntegration_NotificationsPushRequestsServed_NrOfClientsReflectedOnStatsEndpoint(t *testing.T) {
 	//setting up test controller
 	queue := newUnique(1)
-	h := newHandler(newDispatcher(), &queue, "http://test.api.ft.com")
+	h := newHandler("content", newDispatcher(), &queue, "http://test.api.ft.com")
 	go h.dispatcher.distributeEvents()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +105,7 @@ func TestNotifications_NotificationsInCacheMatchReponseNotifications(t *testing.
 	}
 
 	cache := newUnique(2)
-	h := newHandler(nil, &cache, "http://test.api.ft.com")
+	h := newHandler("content", nil, &cache, "http://test.api.ft.com")
 	cache.enqueue(&not0)
 	cache.enqueue(&not1)
 	req, err := http.NewRequest("GET", "http://localhost:8080/content/notifications", nil)
@@ -136,7 +136,7 @@ func TestNotifications_EmptyNextPageIsEmpty(t *testing.T) {
 		}},
 	}
 	cache := newUnique(10)
-	h := newHandler(nil, &cache, "http://localhost:8080")
+	h := newHandler("content", nil, &cache, "http://localhost:8080")
 	req, err := http.NewRequest("GET", "http://localhost:8080/__notifications-push/content/notifications?empty=true", nil)
 	if err != nil {
 		t.Errorf("[%v]", err)

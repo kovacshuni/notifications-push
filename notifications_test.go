@@ -6,7 +6,7 @@ import (
 )
 
 func TestBuildNotification_MissingUUID_NotificationNil(t *testing.T) {
-	nb := notificationBuilder{"http://test.api.ft.com"}
+	nb := notificationBuilder{"http://test.api.ft.com", "content"}
 	testCmsPubEvent := cmsPublicationEvent{
 		UUID: "",
 	}
@@ -17,7 +17,7 @@ func TestBuildNotification_MissingUUID_NotificationNil(t *testing.T) {
 }
 
 func TestBuildNotification_MissingPayload_EventTypeDELETE(t *testing.T) {
-	nb := notificationBuilder{"http://test.api.ft.com"}
+	nb := notificationBuilder{"http://test.api.ft.com", "content"}
 	testCmsPubEvent := cmsPublicationEvent{
 		UUID:    "foobar",
 		Payload: nil,
@@ -29,7 +29,7 @@ func TestBuildNotification_MissingPayload_EventTypeDELETE(t *testing.T) {
 }
 
 func TestBuildNotification_PayloadIsEmptyString_EventTypeDELETE(t *testing.T) {
-	nb := notificationBuilder{"http://test.api.ft.com"}
+	nb := notificationBuilder{"http://test.api.ft.com", "content"}
 	testCmsPubEvent := cmsPublicationEvent{
 		UUID:    "foobar",
 		Payload: "",
@@ -41,7 +41,7 @@ func TestBuildNotification_PayloadIsEmptyString_EventTypeDELETE(t *testing.T) {
 }
 
 func TestBuildNotification_PayloadIsEmptyMap_EventTypeDELETE(t *testing.T) {
-	nb := notificationBuilder{"http://test.api.ft.com"}
+	nb := notificationBuilder{"http://test.api.ft.com", "content"}
 	testCmsPubEvent := cmsPublicationEvent{
 		UUID:    "foobar",
 		Payload: map[string]interface{}{},
@@ -53,7 +53,7 @@ func TestBuildNotification_PayloadIsEmptyMap_EventTypeDELETE(t *testing.T) {
 }
 
 func TestBuildNotification_HappyScenario(t *testing.T) {
-	nb := notificationBuilder{"http://test.api.ft.com"}
+	nb := notificationBuilder{"http://test.api.ft.com", "content"}
 	testCmsPubEvent := cmsPublicationEvent{
 		UUID:    "baz",
 		Payload: []byte(`{ "foo" : "bar" }`),
@@ -65,7 +65,7 @@ func TestBuildNotification_HappyScenario(t *testing.T) {
 	if !strings.HasSuffix(n.ID, "baz") {
 		t.Errorf("Expected ID suffix: [baz]. Actual ID URL: [%v]", n.ID)
 	}
-	if !strings.HasSuffix(n.APIURL, "baz") || !strings.HasPrefix(n.APIURL, nb.APIBaseURL) {
-		t.Errorf("Expected: APIURL suffix: [baz], prefix: [%v]. Actual APIURL: [%v]", nb.APIBaseURL, n.APIURL)
+	if !strings.HasSuffix(n.APIURL, "baz") || !strings.HasPrefix(n.APIURL, nb.apiBaseURL) {
+		t.Errorf("Expected: APIURL suffix: [baz], prefix: [%v]. Actual APIURL: [%v]", nb.apiBaseURL, n.APIURL)
 	}
 }

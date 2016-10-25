@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func TestGetClientAddr_XForwardedHeadersPopulated(t *testing.T) {
@@ -158,13 +160,13 @@ func TestNotifications_EmptyNextPageIsEmpty(t *testing.T) {
 func testRequest(url string) {
 	resp, err := http.Get(url)
 	if err != nil {
-		warnLogger.Println(err)
+		log.Warn(err)
 	}
 	defer func() {
 		time.Sleep(time.Second * 2)
 		err = resp.Body.Close()
 		if err != nil {
-			warnLogger.Println(err.Error())
+			log.Warn(err)
 		}
 	}()
 }

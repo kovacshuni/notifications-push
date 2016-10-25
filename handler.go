@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 const evPrefix = "data: "
@@ -63,12 +65,12 @@ func (h handler) notificationsPush(w http.ResponseWriter, r *http.Request) {
 		case event := <-events:
 			_, err := bw.WriteString(evPrefix + event + "\n\n")
 			if err != nil {
-				infoLogger.Printf("[%v]", err)
+				log.Infof("[%v]", err)
 				return
 			}
 			err = bw.Flush()
 			if err != nil {
-				infoLogger.Printf("[%v]", err)
+				log.Infof("[%v]", err)
 				return
 			}
 			flusher := w.(http.Flusher)
@@ -94,13 +96,13 @@ func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
 	}
 	bytes, err := json.Marshal(pageUpp)
 	if err != nil {
-		warnLogger.Printf(errMsgPrefix, err)
+		log.Warnf(errMsgPrefix, err)
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
 	_, err = w.Write(bytes)
 	if err != nil {
-		warnLogger.Printf(errMsgPrefix, err)
+		log.Warnf(errMsgPrefix, err)
 		http.Error(w, "", http.StatusInternalServerError)
 	}
 }
@@ -116,17 +118,17 @@ func (h handler) stats(w http.ResponseWriter, r *http.Request) {
 	}
 	bytes, err := json.Marshal(stats)
 	if err != nil {
-		warnLogger.Printf("[%v]", err)
+		log.Warnf("[%v]", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-type", "application/json")
 	b, err := w.Write(bytes)
 	if b == 0 {
-		warnLogger.Printf("Response written to HTTP was empty.")
+		log.Warnf("Response written to HTTP was empty.")
 	}
 	if err != nil {
-		warnLogger.Printf("Error writing stats to HTTP response: %v", err.Error())
+		log.Warnf("Error writing stats to HTTP response: %v", err.Error())
 	}
 }
 

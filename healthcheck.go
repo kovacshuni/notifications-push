@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/Financial-Times/go-fthealth"
 	"github.com/Financial-Times/message-queue-gonsumer/consumer"
 )
@@ -58,7 +60,7 @@ func (h *healthcheck) checkAggregateMessageQueueProxiesReachable() error {
 func (h *healthcheck) checkMessageQueueProxyReachable(address string, topic string, authKey string, queue string) error {
 	req, err := http.NewRequest("GET", address+"/topics", nil)
 	if err != nil {
-		warnLogger.Printf("Could not connect to proxy: %v", err.Error())
+		log.Warnf("Could not connect to proxy: %v", err.Error())
 		return err
 	}
 	if len(authKey) > 0 {
@@ -69,7 +71,7 @@ func (h *healthcheck) checkMessageQueueProxyReachable(address string, topic stri
 	}
 	resp, err := h.client.Do(req)
 	if err != nil {
-		warnLogger.Printf("Could not connect to proxy: %v", err.Error())
+		log.Warnf("Could not connect to proxy: %v", err.Error())
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()

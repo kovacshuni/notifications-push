@@ -3,6 +3,8 @@ package main
 import (
 	"sync"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type uniqueue struct {
@@ -17,12 +19,12 @@ func newUnique(capacity int) uniqueue {
 
 func (cb *uniqueue) enqueue(n *notificationUPP) {
 	if n.LastModified == "" || n.Type == "" || n.ID == "" {
-		warnLogger.Printf("Incoming notification must have an ID, a type and a last modified date: %v", n)
+		log.Warnf("Incoming notification must have an ID, a type and a last modified date: %v", n)
 		return
 	}
 	newestRawDate, err := time.Parse(time.RFC3339, n.LastModified)
 	if err != nil {
-		warnLogger.Printf("Incoming notification has malformed date: %v", n.LastModified)
+		log.Warnf("Incoming notification has malformed date: %v", n.LastModified)
 		return
 	}
 	cb.mutex.Lock()
@@ -30,7 +32,7 @@ func (cb *uniqueue) enqueue(n *notificationUPP) {
 		if e.ID == n.ID && e.Type == n.Type {
 			eDate, err := time.Parse(time.RFC3339Nano, e.LastModified)
 			if err != nil {
-				warnLogger.Printf("Notification in cache has malformed date: %v", n)
+				log.Warnf("Notification in cache has malformed date: %v", n)
 				return
 			}
 			if eDate.Before(newestRawDate) {

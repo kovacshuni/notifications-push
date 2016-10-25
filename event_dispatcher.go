@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 const heartbeatMsg = "[]"
@@ -44,12 +46,12 @@ func (d eventDispatcher) distributeEvents() {
 			d.sendHeartBeat()
 			resetTimer(heartbeat)
 		case s := <-d.addSubscriber:
-			infoLogger.Printf("New subscriber [%s].", s.subscriber.Addr)
+			log.Infof("New subscriber [%s].", s.subscriber.Addr)
 			d.subscribers[s.ch] = s.subscriber
 			s.ch <- heartbeatMsg
 		case s := <-d.removeSubscriber:
 			delete(d.subscribers, s.ch)
-			infoLogger.Printf("Subscriber left [%s].", s.subscriber)
+			log.Infof("Subscriber left [%s].", s.subscriber)
 		}
 	}
 }
@@ -59,7 +61,7 @@ func (d eventDispatcher) sendMsg(msg string) {
 		select {
 		case subCh <- msg:
 		default:
-			warnLogger.Printf("Subscriber [%v] lagging behind.", sub)
+			log.Warnf("Subscriber [%v] lagging behind.", sub)
 		}
 	}
 }
@@ -69,7 +71,7 @@ func (d eventDispatcher) sendHeartBeat() {
 		select {
 		case subCh <- heartbeatMsg:
 		default:
-			warnLogger.Printf("Subscriber [%v] lagging behind when sending heartbeat.", sub)
+			log.Warnf("Subscriber [%v] lagging behind when sending heartbeat.", sub)
 		}
 	}
 }

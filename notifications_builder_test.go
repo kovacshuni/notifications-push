@@ -10,8 +10,8 @@ func TestBuildNotification_MissingUUID_NotificationNil(t *testing.T) {
 	testCmsPubEvent := cmsPublicationEvent{
 		UUID: "",
 	}
-	n := nb.buildNotification(testCmsPubEvent)
-	if n != nil {
+	n, err := nb.buildNotification(testCmsPubEvent, "tid_test")
+	if err != nil {
 		t.Errorf("Expected: [nil]. Actual: [%v]", n)
 	}
 }
@@ -22,7 +22,7 @@ func TestBuildNotification_MissingPayload_EventTypeDELETE(t *testing.T) {
 		UUID:    "foobar",
 		Payload: nil,
 	}
-	n := nb.buildNotification(testCmsPubEvent)
+	n, _ := nb.buildNotification(testCmsPubEvent, "tid_test")
 	if !strings.HasSuffix(n.Type, "DELETE") {
 		t.Errorf("Expected event type DELETE. Actual type URL: [%v]", n.Type)
 	}
@@ -34,7 +34,7 @@ func TestBuildNotification_PayloadIsEmptyString_EventTypeDELETE(t *testing.T) {
 		UUID:    "foobar",
 		Payload: "",
 	}
-	n := nb.buildNotification(testCmsPubEvent)
+	n, _ := nb.buildNotification(testCmsPubEvent, "tid_tst")
 	if !strings.HasSuffix(n.Type, "DELETE") {
 		t.Errorf("Expected event type DELETE. Actual type URL: [%v]", n.Type)
 	}
@@ -46,7 +46,7 @@ func TestBuildNotification_PayloadIsEmptyMap_EventTypeDELETE(t *testing.T) {
 		UUID:    "foobar",
 		Payload: map[string]interface{}{},
 	}
-	n := nb.buildNotification(testCmsPubEvent)
+	n, _ := nb.buildNotification(testCmsPubEvent, "tid_test")
 	if !strings.HasSuffix(n.Type, "DELETE") {
 		t.Errorf("Expected event type DELETE. Actual type URL: [%v]", n.Type)
 	}
@@ -58,7 +58,7 @@ func TestBuildNotification_HappyScenario(t *testing.T) {
 		UUID:    "baz",
 		Payload: []byte(`{ "foo" : "bar" }`),
 	}
-	n := nb.buildNotification(testCmsPubEvent)
+	n, _ := nb.buildNotification(testCmsPubEvent, "tid_test")
 	if !strings.HasSuffix(n.Type, "UPDATE") {
 		t.Errorf("Expected event type UPDATE. Actual type URL: [%v]", n.Type)
 	}

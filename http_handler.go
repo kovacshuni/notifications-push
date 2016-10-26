@@ -4,33 +4,29 @@ import (
 	"bufio"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 )
 
-const evPrefix = "data: "
 const errMsgPrefix = "Serving /notifications request: [%v]"
 
-type handler struct {
-	resource           string
-	dispatcher         *eventDispatcher
-	notificationsCache *uniqueue
-	apiBaseURL         string
-	internalBaseURL    string
+type httpHandler struct {
+	dispatcher *notificationDispatcher
 }
 
-func newHandler(resource string, dispatcher *eventDispatcher, notificationsCache *uniqueue, apiBaseURL string) handler {
-	return handler{resource, dispatcher, notificationsCache, apiBaseURL, apiBaseURL + "/__notifications-push"}
+func newHttpHandler(dispatcher *notificationDispatcher) httpHandler {
+	return httpHandler{dispatcher}
 }
 
-type stats struct {
+type subscriptionStats struct {
 	NrOfSubscribers int          `json:"nrOfSubscribers"`
 	Subscribers     []subscriber `json:"subscribers"`
 }
 
-func (h handler) notificationsPush(w http.ResponseWriter, r *http.Request) {
+func (h httpHandler) notificationsPush(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Connection", "keep-alive")
@@ -45,25 +41,25 @@ func (h handler) notificationsPush(w http.ResponseWriter, r *http.Request) {
 
 	bw := bufio.NewWriter(w)
 
-	events := make(chan string, 16)
-	subscriberEvent := subscriberEvent{
-		ch: events,
-		subscriber: subscriber{
-			Addr:  getClientAddr(r),
-			Since: time.Now(),
-		},
+	monitorParam := r.URL.Query().Get("monitor")
+	isMonitor, _ := strconv.ParseBool(monitorParam)
+
+	notificationChannel := make(chan string, 16)
+	s := subscriber{
+		notificationChannel: notificationChannel,
+		Addr:                getClientAddr(r),
+		Since:               time.Now(),
+		isMonitor:           isMonitor,
 	}
-	h.dispatcher.addSubscriber <- subscriberEvent
-	defer func() {
-		h.dispatcher.removeSubscriber <- subscriberEvent
-	}()
+	h.dispatcher.add(s)
+	defer h.dispatcher.remove(s)
 
 	for {
 		select {
 		case <-cn.CloseNotify():
 			return
-		case event := <-events:
-			_, err := bw.WriteString(evPrefix + event + "\n\n")
+		case notification := <-notificationChannel:
+			_, err := bw.WriteString("data: " + notification + "\n\n")
 			if err != nil {
 				log.Infof("[%v]", err)
 				return
@@ -79,40 +75,28 @@ func (h handler) notificationsPush(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h handler) notifications(w http.ResponseWriter, r *http.Request) {
+func (h httpHandler) history(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-type", "application/json")
-	var pageUpp notificationsPageUpp
-	isEmpty := r.URL.Query().Get("empty")
 
-	if isEmpty == "true" {
-		pageUpp = newNotificationsPageUpp([]notificationUPP{}, r.URL.RequestURI(), h.apiBaseURL, h.resource, h.internalBaseURL)
-	} else {
-		it := h.notificationsCache.items()
-		ns := make([]notificationUPP, len(it))
-		for i := range it {
-			ns[i] = *it[i]
-		}
-		pageUpp = newNotificationsPageUpp(ns, r.URL.RequestURI(), h.apiBaseURL, h.resource, h.internalBaseURL)
-	}
-	bytes, err := json.Marshal(pageUpp)
+	historyJson, err := json.Marshal(h.dispatcher.notificationHistory.history())
 	if err != nil {
 		log.Warnf(errMsgPrefix, err)
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
-	_, err = w.Write(bytes)
+	_, err = w.Write(historyJson)
 	if err != nil {
 		log.Warnf(errMsgPrefix, err)
 		http.Error(w, "", http.StatusInternalServerError)
 	}
 }
 
-func (h handler) stats(w http.ResponseWriter, r *http.Request) {
+func (h httpHandler) stats(w http.ResponseWriter, r *http.Request) {
 	subscribers := []subscriber{}
-	for _, s := range h.dispatcher.subscribers {
+	for s, _ := range h.dispatcher.subscribers {
 		subscribers = append(subscribers, s)
 	}
-	stats := stats{
+	stats := subscriptionStats{
 		NrOfSubscribers: len(h.dispatcher.subscribers),
 		Subscribers:     subscribers,
 	}

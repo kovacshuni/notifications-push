@@ -1,17 +1,11 @@
 package main
 
 import (
-	"encoding/json"
-
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"os/signal"
-	"regexp"
 	"strconv"
 	"strings"
-	"sync"
-	"syscall"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -91,11 +85,11 @@ func main() {
 		Desc:   "application port",
 		EnvVar: "PORT",
 	})
-	nCap := app.Int(cli.IntOpt{
-		Name:   "notifications_capacity",
+	historySize := app.Int(cli.IntOpt{
+		Name:   "notification_history_size",
 		Value:  200,
-		Desc:   "the nr of recent notifications to be saved and returned on the /notifications endpoint",
-		EnvVar: "NOTIFICATIONS_CAPACITY",
+		Desc:   "the number of recent notifications to be saved and returned on the /__history endpoint",
+		EnvVar: "NOTIFICATION_HISTORY_SIZE",
 	})
 	delay := app.Int(cli.IntOpt{
 		Name:   "notifications_delay",
@@ -105,9 +99,6 @@ func main() {
 	})
 
 	app.Action = func() {
-		dispatcher := newDispatcher()
-		go dispatcher.distributeEvents()
-
 		consumerConfig := queueConsumer.QueueConfig{}
 		consumerConfig.Addrs = strings.Split(*consumerAddrs, ",")
 		consumerConfig.Group = *consumerGroupID
@@ -117,18 +108,20 @@ func main() {
 		consumerConfig.AutoCommitEnable = *consumerAutoCommitEnable
 		consumerConfig.BackoffPeriod = *backoff
 
-		log.Infof("Config: [\n\tresourse: [%v]\n\tconsumerAddrs: [%v]\n\tconsumerGroupID: [%v]\n\ttopic: [%v]\n\tconsumerAutoCommitEnable: [%v]\n\tapiBaseURL: [%v]\n\tnotifications_capacity: [%v]\n]", *resource, *consumerAddrs, *consumerGroupID, *topic, *consumerAutoCommitEnable, *apiBaseURL, *nCap)
+		dispatcher := newNotificationDispatcher(*delay, *historySize)
+		queueHandler := newMessageQueueHandler(*resource, *apiBaseURL, *dispatcher)
+		consumer := queueConsumer.NewConsumer(consumerConfig, queueHandler.handleMessages, http.Client{})
 
-		notificationsCache := newUnique(*nCap)
-		h := newHandler(*resource, dispatcher, &notificationsCache, *apiBaseURL)
+		notificationsPushService := newNotificationsPushService(dispatcher, consumer)
+
+		h := newHttpHandler(dispatcher)
 		hc := &healthcheck{client: http.Client{}, consumerConf: consumerConfig}
 
 		notificationsPushPath := "/" + *resource + "/notifications-push"
-		notificationsPath := "/" + *resource + "/notifications"
 
 		http.HandleFunc(notificationsPushPath, h.notificationsPush)
-		http.HandleFunc(notificationsPath, h.notifications)
-		http.HandleFunc("/stats", h.stats)
+		http.HandleFunc("/__history", h.history)
+		http.HandleFunc("/__stats", h.stats)
 		http.HandleFunc("/__health", hc.healthcheck())
 		http.HandleFunc("/__gtg", hc.gtg)
 		go func() {
@@ -136,89 +129,10 @@ func main() {
 			log.Fatal(err)
 		}()
 
-		whiteList := regexp.MustCompile(`^http://.*-transformer-(pr|iw)-uk-.*\.svc\.ft\.com(:\d{2,5})?/(` + *resource + `)/[\w-]+.*$`)
-
-		app := notificationsApp{
-			dispatcher,
-			&consumerConfig,
-			notificationBuilder{*apiBaseURL, *resource},
-			&notificationsCache,
-			*delay,
-			whiteList,
-		}
-		app.consumeMessages()
+		notificationsPushService.start()
 	}
+
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
-}
-
-type notificationsApp struct {
-	eventDispatcher     *eventDispatcher
-	consumerConfig      *queueConsumer.QueueConfig
-	notificationBuilder notificationBuilder
-	notificationsCache  *uniqueue
-	delay               int
-	whiteList           *regexp.Regexp
-}
-
-func (app notificationsApp) consumeMessages() {
-	consumer := queueConsumer.NewConsumer(*app.consumerConfig, app.receiveEvents, http.Client{})
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go func() {
-		log.Println("Started consuming.")
-		consumer.Start()
-		log.Println("Finished consuming.")
-		wg.Done()
-	}()
-
-	ch := make(chan os.Signal)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-	<-ch
-	log.Println("Termination signal received. Quitting consumeMessages function.")
-	consumer.Stop()
-	wg.Wait()
-}
-
-func (app notificationsApp) receiveEvents(msg queueConsumer.Message) {
-	tid := msg.Headers["X-Request-Id"]
-	if strings.HasPrefix(tid, "SYNTH") {
-		return
-	}
-	log.Infof("Received event: tid=[%v].", tid)
-	var cmsPubEvent cmsPublicationEvent
-	err := json.Unmarshal([]byte(msg.Body), &cmsPubEvent)
-	if err != nil {
-		log.Warnf("Skipping event: tid=[%v], msg=[%v]: [%v].", tid, msg.Body, err)
-		return
-	}
-	uuid := cmsPubEvent.UUID
-	if !app.whiteList.MatchString(cmsPubEvent.ContentURI) {
-		log.Infof("Skipping event: tid=[%v]. Invalid resourceUri=[%v]", tid, cmsPubEvent.ContentURI)
-		return
-	}
-
-	n := app.notificationBuilder.buildNotification(cmsPubEvent)
-	if n == nil {
-		log.Warnf("Skipping event: tid=[%v]. Cannot build notification for msg=[%#v]", tid, cmsPubEvent)
-		return
-	}
-	bytes, err := json.Marshal([]*notification{n})
-	if err != nil {
-		log.Warnf("Skipping event: tid=[%v]. Notification [%#v]: [%v]", tid, n, err)
-		return
-	}
-
-	go func() {
-		// wait for the content or lists to be ingested before notifying the clients. Delay is a CLI arg.
-		time.Sleep(time.Duration(app.delay) * time.Second)
-		log.Infof("Notifying clients about tid=[%v] uuid=[%v].", tid, uuid)
-		app.eventDispatcher.incoming <- string(bytes[:])
-
-		uppN := buildUPPNotification(n, tid, cmsPubEvent.LastModified)
-		app.notificationsCache.enqueue(uppN)
-	}()
 }

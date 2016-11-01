@@ -11,6 +11,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
+	"github.com/Financial-Times/notifications-push/consumer"
+	"github.com/Financial-Times/notifications-push/dispatcher"
+	"github.com/Financial-Times/notifications-push/resources"
 	"github.com/jawher/mow.cli"
 )
 
@@ -99,40 +102,47 @@ func main() {
 	})
 
 	app.Action = func() {
-		consumerConfig := queueConsumer.QueueConfig{}
-		consumerConfig.Addrs = strings.Split(*consumerAddrs, ",")
-		consumerConfig.Group = *consumerGroupID
-		consumerConfig.Topic = *topic
-		consumerConfig.Queue = *consumerHost
-		consumerConfig.AuthorizationKey = *consumerAuthorizationKey
-		consumerConfig.AutoCommitEnable = *consumerAutoCommitEnable
-		consumerConfig.BackoffPeriod = *backoff
+		consumerConfig := queueConsumer.QueueConfig{
+			Addrs:            strings.Split(*consumerAddrs, ","),
+			Group:            *consumerGroupID,
+			Topic:            *topic,
+			Queue:            *consumerHost,
+			AuthorizationKey: *consumerAuthorizationKey,
+			AutoCommitEnable: *consumerAutoCommitEnable,
+			BackoffPeriod:    *backoff,
+		}
 
-		dispatcher := newNotificationDispatcher(*delay, *historySize)
-		queueHandler := newMessageQueueHandler(*resource, *apiBaseURL, *dispatcher)
-		consumer := queueConsumer.NewConsumer(consumerConfig, queueHandler.handleMessages, http.Client{})
+		history := dispatcher.NewHistory(*historySize)
+		dispatcher := dispatcher.NewDispatcher(*delay, history)
 
-		notificationsPushService := newNotificationsPushService(dispatcher, consumer)
+		mapper := consumer.NotificationMapper{
+			Resource:   *resource,
+			APIBaseURL: *apiBaseURL,
+		}
 
-		h := newHttpHandler(dispatcher)
-		hc := &healthcheck{client: http.Client{}, consumerConf: consumerConfig}
+		queueHandler := consumer.NewMessageQueueHandler(*resource, mapper, dispatcher)
+		consumer := queueConsumer.NewConsumer(consumerConfig, queueHandler.HandleMessage, http.Client{})
 
-		notificationsPushPath := "/" + *resource + "/notifications-push"
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history)
 
-		http.HandleFunc(notificationsPushPath, h.notificationsPush)
-		http.HandleFunc("/__history", h.history)
-		http.HandleFunc("/__stats", h.stats)
-		http.HandleFunc("/__health", hc.healthcheck())
-		http.HandleFunc("/__gtg", hc.gtg)
-		go func() {
-			err := http.ListenAndServe(":"+strconv.Itoa(*port), nil)
-			log.Fatal(err)
-		}()
-
-		notificationsPushService.start()
+		pushService := newPushService(dispatcher, consumer)
+		pushService.start()
 	}
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History) {
+	notificationsPushPath := "/" + resource + "/notifications-push"
+
+	http.HandleFunc(notificationsPushPath, resources.Push(dispatcher))
+	http.HandleFunc("/__history", resources.History(history))
+	http.HandleFunc("/__stats", resources.Stats(dispatcher))
+	//http.HandleFunc("/__health", resources.)
+	//http.HandleFunc("/__gtg", hc.gtg)
+
+	err := http.ListenAndServe(listen, nil)
+	log.Fatal(err)
 }

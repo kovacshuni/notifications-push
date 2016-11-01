@@ -52,11 +52,13 @@ func Push(registrator dispatcher.Registrator) func(w http.ResponseWriter, r *htt
 					log.Infof("[%v]", err)
 					return
 				}
+
 				err = bw.Flush()
 				if err != nil {
 					log.Infof("[%v]", err)
 					return
 				}
+
 				flusher := w.(http.Flusher)
 				flusher.Flush()
 			}

@@ -28,7 +28,7 @@ func (m MockDispatcher) GetSubscribers() []dispatcher.Subscriber {
 	return args.Get(0).([]dispatcher.Subscriber)
 }
 
-func (m MockDispatcher) Register(subscriber dispatcher.Subscriber) {
+func (m *MockDispatcher) Register(subscriber dispatcher.Subscriber) {
 	m.Called(subscriber)
 }
 

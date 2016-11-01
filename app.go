@@ -123,7 +123,9 @@ func main() {
 		queueHandler := consumer.NewMessageQueueHandler(*resource, mapper, dispatcher)
 		consumer := queueConsumer.NewConsumer(consumerConfig, queueHandler.HandleMessage, http.Client{})
 
-		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history)
+		healthcheckConfig := resources.HealthcheckConfig{Client: &http.Client{}, ConsumerConfig: consumerConfig}
+
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, healthcheckConfig)
 
 		pushService := newPushService(dispatcher, consumer)
 		pushService.start()
@@ -134,14 +136,14 @@ func main() {
 	}
 }
 
-func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History) {
+func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, healthcheckConfig resources.HealthcheckConfig) {
 	notificationsPushPath := "/" + resource + "/notifications-push"
 
 	http.HandleFunc(notificationsPushPath, resources.Push(dispatcher))
 	http.HandleFunc("/__history", resources.History(history))
 	http.HandleFunc("/__stats", resources.Stats(dispatcher))
-	//http.HandleFunc("/__health", resources.)
-	//http.HandleFunc("/__gtg", hc.gtg)
+	http.HandleFunc("/__health", resources.Health(healthcheckConfig))
+	http.HandleFunc("/__gtg", resources.GTG(healthcheckConfig))
 
 	err := http.ListenAndServe(listen, nil)
 	log.Fatal(err)

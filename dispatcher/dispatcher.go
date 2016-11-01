@@ -1,7 +1,6 @@
 package dispatcher
 
 import (
-	"encoding/json"
 	"sync"
 	"time"
 
@@ -29,7 +28,7 @@ func (d *dispatcher) heartbeat() {
 	defer d.lock.RUnlock()
 
 	for sub := range d.subscribers {
-		sub.NotificationChannel <- heartbeatMsg
+		sub.NotificationChannel() <- heartbeatMsg
 	}
 }
 
@@ -43,32 +42,32 @@ func (d *dispatcher) forwardToSubscribers(notification Notification) {
 	d.lock.RLock()
 	defer d.lock.RUnlock()
 
-	regular, monitor, err := marshal(notification)
-	if err != nil {
-		log.WithError(err).Error("Failed to marshal notification!")
-		return
-	}
-
 	for sub := range d.subscribers {
-		if sub.IsMonitor {
-			sub.NotificationChannel <- monitor
-			continue
-		}
-
-		sub.NotificationChannel <- regular
+		sub.send(notification)
 	}
 }
 
-func marshal(notification Notification) (string, string, error) {
-	regular, err := json.Marshal(notification)
+func (d *dispatcher) Register(subscriber Subscriber) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
-	notification.PublishReference = ""
-	notification.LastModified = ""
-	monitor, _ := json.Marshal(notification)
+	d.subscribers[subscriber] = true
+}
 
-	if err != nil {
-		return "", "", err
+func (d *dispatcher) Subscribers() []Subscriber {
+	d.lock.RLock()
+	defer d.lock.RUnlock()
+
+	var subs []Subscriber
+	for sub := range d.subscribers {
+		subs = append(subs, sub)
 	}
+	return subs
+}
 
-	return string(regular), string(monitor), err
+func (d *dispatcher) Close(subscriber Subscriber) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	delete(d.subscribers, subscriber)
 }

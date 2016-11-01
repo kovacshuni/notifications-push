@@ -38,7 +38,7 @@ func (d *dispatcher) Start() {
 type Dispatcher interface {
 	Start()
 	Send(notification Notification)
-	GetSubscribers() []Subscriber
+	Subscribers() []Subscriber
 	Registrator
 }
 

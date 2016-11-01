@@ -1,32 +1,83 @@
 package dispatcher
 
-import "time"
+import (
+	"encoding/json"
+	"reflect"
+	"time"
+)
 
-type Subscriber struct {
-	NotificationChannel chan string
-	Addr                string
-	Since               time.Time
-	IsMonitor           bool
+type Subscriber interface {
+	send(n Notification) error
+	NotificationChannel() chan string
+	address() string
+	since() time.Time
 }
 
-func (d *dispatcher) Register(subscriber Subscriber) {
-	d.lock.Lock()
-	defer d.lock.Unlock()
-
-	d.subscribers[subscriber] = true
+type externalSubscriber struct {
+	notificationChannel chan string
+	addr                string
+	sinceTime           time.Time
 }
 
-func (d *dispatcher) GetSubscribers() []Subscriber {
-	var subs []Subscriber
-	for sub := range d.subscribers {
-		subs = append(subs, sub)
+func NewExternalSubscriber(address string) *externalSubscriber {
+	notificationChannel := make(chan string, 16)
+	return &externalSubscriber{
+		notificationChannel: notificationChannel,
+		addr:                address,
+		sinceTime:           time.Now(),
 	}
-	return subs
 }
 
-func (d *dispatcher) Close(subscriber Subscriber) {
-	d.lock.Lock()
-	defer d.lock.Unlock()
+func (s *externalSubscriber) address() string {
+	return s.addr
+}
 
-	delete(d.subscribers, subscriber)
+func (s *externalSubscriber) since() time.Time {
+	return s.sinceTime
+}
+
+func (s *externalSubscriber) send(n Notification) error {
+	notificationMsg, err := s.marshal(n)
+	if err != nil {
+		return err
+	}
+	s.notificationChannel <- notificationMsg
+	return nil
+}
+
+func (s *externalSubscriber) marshal(n Notification) (string, error) {
+	n.PublishReference = ""
+	n.LastModified = ""
+
+	jsonNotification, err := json.Marshal(n)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(jsonNotification), err
+}
+
+func (s *externalSubscriber) NotificationChannel() chan string {
+	return s.notificationChannel
+}
+
+func (s *externalSubscriber) MarshalJSON() ([]byte, error) {
+	return json.Marshal(newSubscriberPayload(s))
+}
+
+type SubscriberPayload struct {
+	Address            string `json:"address"`
+	Since              string `json:"since"`
+	ConnectionDuration string `json:"connectionDuration"`
+	Type               string `json:"type"`
+}
+
+func newSubscriberPayload(s Subscriber) *SubscriberPayload {
+	return &SubscriberPayload{
+		Address:            s.address(),
+		Since:              s.since().Format(time.StampMilli),
+		ConnectionDuration: time.Since(s.since()).String(),
+		Type:               reflect.TypeOf(s).Elem().Name(),
+	}
 }

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	log "github.com/Sirupsen/logrus"
@@ -31,12 +30,12 @@ func Push(registrator dispatcher.Registrator) func(w http.ResponseWriter, r *htt
 		monitorParam := r.URL.Query().Get("monitor")
 		isMonitor, _ := strconv.ParseBool(monitorParam)
 
-		notificationChannel := make(chan string, 16)
-		s := dispatcher.Subscriber{
-			NotificationChannel: notificationChannel,
-			Addr:                getClientAddr(r),
-			Since:               time.Now(),
-			IsMonitor:           isMonitor,
+		var s dispatcher.Subscriber
+
+		if isMonitor {
+			s = dispatcher.NewMonitor(getClientAddr(r))
+		} else {
+			s = dispatcher.NewExternalSubscriber(getClientAddr(r))
 		}
 
 		registrator.Register(s)
@@ -46,7 +45,7 @@ func Push(registrator dispatcher.Registrator) func(w http.ResponseWriter, r *htt
 			select {
 			case <-cn.CloseNotify():
 				return
-			case notification := <-notificationChannel:
+			case notification := <-s.NotificationChannel():
 				_, err := bw.WriteString("data: " + notification + "\n\n")
 				if err != nil {
 					log.Infof("[%v]", err)

@@ -16,7 +16,7 @@ type subscriptionStats struct {
 // Stats returns subscriber stats
 func Stats(dispatcher dispatcher.Dispatcher) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		subscribers := dispatcher.GetSubscribers()
+		subscribers := dispatcher.Subscribers()
 
 		stats := subscriptionStats{
 			NrOfSubscribers: len(subscribers),

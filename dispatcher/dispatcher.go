@@ -87,7 +87,6 @@ func (d *dispatcher) forwardToSubscribers(notification Notification) {
 	defer d.lock.Unlock()
 
 	for sub := range d.subscribers {
-		log.Info(sub.address())
 		sub.send(notification)
 	}
 }
@@ -97,7 +96,7 @@ func (d *dispatcher) Register(subscriber Subscriber) {
 	defer d.lock.Unlock()
 
 	d.subscribers[subscriber] = true
-	log.WithField("subscriber", subscriber.address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Registered new subscriber")
+	log.WithField("subscriber", subscriber.Address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Registered new subscriber")
 }
 
 func (d *dispatcher) Subscribers() []Subscriber {
@@ -116,5 +115,5 @@ func (d *dispatcher) Close(subscriber Subscriber) {
 	defer d.lock.Unlock()
 
 	delete(d.subscribers, subscriber)
-	log.WithField("subscriber", subscriber.address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Unregistered subscriber")
+	log.WithField("subscriber", subscriber.Address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Unregistered subscriber")
 }

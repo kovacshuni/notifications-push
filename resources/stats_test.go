@@ -12,7 +12,7 @@ import (
 
 func TestStats(t *testing.T) {
 	d := new(mocks.MockDispatcher)
-	d.On("GetSubscribers").Return([]dispatcher.Subscriber{})
+	d.On("Subscribers").Return([]dispatcher.Subscriber{})
 
 	w := httptest.NewRecorder()
 	req, err := http.NewRequest("GET", "/stats", nil)

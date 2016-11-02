@@ -17,8 +17,8 @@ var start func(sub dispatcher.Subscriber)
 func TestPush(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("dispatcher.Subscriber")).Return()
-	d.On("Close", mock.AnythingOfType("dispatcher.Subscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -29,12 +29,11 @@ func TestPush(t *testing.T) {
 	req.Header.Set("X-Forwarded-For", "some-host, some-other-host-that-isnt-used")
 
 	start = func(sub dispatcher.Subscriber) {
-		sub.NotificationChannel <- "hi"
+		sub.NotificationChannel() <- "hi"
 		w.closer <- true
 
-		assert.Equal(t, false, sub.IsMonitor)
-		assert.True(t, time.Now().After(sub.Since))
-		assert.Equal(t, "some-host", sub.Addr)
+		assert.True(t, time.Now().After(sub.Since()))
+		assert.Equal(t, "some-host", sub.Address())
 	}
 
 	Push(d)(w, req)

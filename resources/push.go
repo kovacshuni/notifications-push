@@ -33,9 +33,9 @@ func Push(registrator dispatcher.Registrator) func(w http.ResponseWriter, r *htt
 		var s dispatcher.Subscriber
 
 		if isMonitor {
-			s = dispatcher.NewMonitor(getClientAddr(r))
+			s = dispatcher.NewMonitorSubscriber(getClientAddr(r))
 		} else {
-			s = dispatcher.NewExternalSubscriber(getClientAddr(r))
+			s = dispatcher.NewStandardSubscriber(getClientAddr(r))
 		}
 
 		registrator.Register(s)

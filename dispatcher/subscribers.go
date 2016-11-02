@@ -2,14 +2,15 @@ package dispatcher
 
 import (
 	"encoding/json"
+	"reflect"
 	"time"
 )
 
 type Subscriber interface {
 	send(n Notification) error
 	NotificationChannel() chan string
-	address() string
-	since() time.Time
+	Address() string
+	Since() time.Time
 }
 
 // Standard Subscriber implementation
@@ -28,11 +29,11 @@ func NewStandardSubscriber(address string) *standardSubscriber {
 	}
 }
 
-func (s *standardSubscriber) address() string {
+func (s *standardSubscriber) Address() string {
 	return s.addr
 }
 
-func (s *standardSubscriber) since() time.Time {
+func (s *standardSubscriber) Since() time.Time {
 	return s.sinceTime
 }
 
@@ -86,4 +87,28 @@ func (m *monitorSubscriber) send(n Notification) error {
 
 func buildMonitorNotificationMsg(n Notification) (string, error) {
 	return buildNotificationMsg(n)
+}
+
+func (s *standardSubscriber) MarshalJSON() ([]byte, error) {
+	return json.Marshal(newSubscriberPayload(s))
+}
+
+func (m *monitorSubscriber) MarshalJSON() ([]byte, error) {
+	return json.Marshal(newSubscriberPayload(m))
+}
+
+type SubscriberPayload struct {
+	Address            string `json:"address"`
+	Since              string `json:"since"`
+	ConnectionDuration string `json:"connectionDuration"`
+	Type               string `json:"type"`
+}
+
+func newSubscriberPayload(s Subscriber) *SubscriberPayload {
+	return &SubscriberPayload{
+		Address:            s.Address(),
+		Since:              s.Since().Format(time.StampMilli),
+		ConnectionDuration: time.Since(s.Since()).String(),
+		Type:               reflect.TypeOf(s).Elem().String(),
+	}
 }

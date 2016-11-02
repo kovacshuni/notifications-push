@@ -2,7 +2,6 @@ package dispatcher
 
 import (
 	"encoding/json"
-	"reflect"
 	"time"
 )
 
@@ -13,31 +12,32 @@ type Subscriber interface {
 	since() time.Time
 }
 
-type externalSubscriber struct {
+// Standard Subscriber implementation
+type standardSubscriber struct {
 	notificationChannel chan string
 	addr                string
 	sinceTime           time.Time
 }
 
-func NewExternalSubscriber(address string) *externalSubscriber {
+func NewStandardSubscriber(address string) *standardSubscriber {
 	notificationChannel := make(chan string, 16)
-	return &externalSubscriber{
+	return &standardSubscriber{
 		notificationChannel: notificationChannel,
 		addr:                address,
 		sinceTime:           time.Now(),
 	}
 }
 
-func (s *externalSubscriber) address() string {
+func (s *standardSubscriber) address() string {
 	return s.addr
 }
 
-func (s *externalSubscriber) since() time.Time {
+func (s *standardSubscriber) since() time.Time {
 	return s.sinceTime
 }
 
-func (s *externalSubscriber) send(n Notification) error {
-	notificationMsg, err := s.marshal(n)
+func (s *standardSubscriber) send(n Notification) error {
+	notificationMsg, err := buildStandardNotificationMsg(n)
 	if err != nil {
 		return err
 	}
@@ -45,10 +45,14 @@ func (s *externalSubscriber) send(n Notification) error {
 	return nil
 }
 
-func (s *externalSubscriber) marshal(n Notification) (string, error) {
+func buildStandardNotificationMsg(n Notification) (string, error) {
 	n.PublishReference = ""
 	n.LastModified = ""
 
+	return buildNotificationMsg(n)
+}
+
+func buildNotificationMsg(n Notification) (string, error) {
 	jsonNotification, err := json.Marshal(n)
 
 	if err != nil {
@@ -58,26 +62,28 @@ func (s *externalSubscriber) marshal(n Notification) (string, error) {
 	return string(jsonNotification), err
 }
 
-func (s *externalSubscriber) NotificationChannel() chan string {
+func (s *standardSubscriber) NotificationChannel() chan string {
 	return s.notificationChannel
 }
 
-func (s *externalSubscriber) MarshalJSON() ([]byte, error) {
-	return json.Marshal(newSubscriberPayload(s))
+// Monitor Subscriber implementation
+type monitorSubscriber struct {
+	*standardSubscriber
 }
 
-type SubscriberPayload struct {
-	Address            string `json:"address"`
-	Since              string `json:"since"`
-	ConnectionDuration string `json:"connectionDuration"`
-	Type               string `json:"type"`
+func NewMonitorSubscriber(address string) *monitorSubscriber {
+	return &monitorSubscriber{NewStandardSubscriber(address)}
 }
 
-func newSubscriberPayload(s Subscriber) *SubscriberPayload {
-	return &SubscriberPayload{
-		Address:            s.address(),
-		Since:              s.since().Format(time.StampMilli),
-		ConnectionDuration: time.Since(s.since()).String(),
-		Type:               reflect.TypeOf(s).Elem().Name(),
+func (m *monitorSubscriber) send(n Notification) error {
+	notificationMsg, err := buildMonitorNotificationMsg(n)
+	if err != nil {
+		return err
 	}
+	m.notificationChannel <- notificationMsg
+	return nil
+}
+
+func buildMonitorNotificationMsg(n Notification) (string, error) {
+	return buildNotificationMsg(n)
 }

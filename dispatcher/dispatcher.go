@@ -1,11 +1,40 @@
 package dispatcher
 
 import (
+	"reflect"
 	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 )
+
+const heartbeatMsg = "[]"
+const heartbeatPeriod = 30 * time.Second
+
+// Dispatcher forwards a new notification onto subscribers.
+type Dispatcher interface {
+	Start()
+	Send(notification Notification)
+	Subscribers() []Subscriber
+	Registrator
+}
+
+// Registrator :smirk:
+type Registrator interface {
+	Register(subscriber Subscriber)
+	Close(subscriber Subscriber)
+}
+
+// NewDispatcher creates and returns a new dispatcher
+func NewDispatcher(delay int, history History) Dispatcher {
+	return &dispatcher{
+		delay:       delay,
+		inbound:     make(chan Notification),
+		subscribers: map[Subscriber]bool{},
+		lock:        &sync.RWMutex{},
+		history:     history,
+	}
+}
 
 type dispatcher struct {
 	delay       int
@@ -15,9 +44,24 @@ type dispatcher struct {
 	history     History
 }
 
+func (d *dispatcher) Start() {
+	heartbeat := time.NewTimer(heartbeatPeriod)
+
+	for {
+		select {
+		case notification := <-d.inbound:
+			d.forwardToSubscribers(notification)
+		case <-heartbeat.C:
+			d.heartbeat()
+		}
+
+		heartbeat.Reset(heartbeatPeriod)
+	}
+}
+
 func (d *dispatcher) Send(notification Notification) {
-	log.WithField("tid", notification.PublishReference).WithField("id", notification.ID).Infof("Received event. Waiting configured delay (%vs).", d.delay)
 	go func() {
+		log.WithField("tid", notification.PublishReference).WithField("id", notification.ID).Infof("Received event. Waiting configured delay (%vs).", d.delay)
 		d.delayForCache(notification)
 		d.inbound <- notification
 	}()
@@ -39,10 +83,11 @@ func (d *dispatcher) delayForCache(notification Notification) {
 func (d *dispatcher) forwardToSubscribers(notification Notification) {
 	log.WithField("tid", notification.PublishReference).WithField("id", notification.ID).Info("Forwarding to subscribers.")
 
-	d.lock.RLock()
-	defer d.lock.RUnlock()
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
 	for sub := range d.subscribers {
+		log.Info(sub.address())
 		sub.send(notification)
 	}
 }
@@ -52,6 +97,7 @@ func (d *dispatcher) Register(subscriber Subscriber) {
 	defer d.lock.Unlock()
 
 	d.subscribers[subscriber] = true
+	log.WithField("subscriber", subscriber.address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Registered new subscriber")
 }
 
 func (d *dispatcher) Subscribers() []Subscriber {
@@ -70,4 +116,5 @@ func (d *dispatcher) Close(subscriber Subscriber) {
 	defer d.lock.Unlock()
 
 	delete(d.subscribers, subscriber)
+	log.WithField("subscriber", subscriber.address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Unregistered subscriber")
 }

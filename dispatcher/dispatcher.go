@@ -1,12 +1,40 @@
 package dispatcher
 
 import (
-	"encoding/json"
+	"reflect"
 	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 )
+
+const heartbeatMsg = "[]"
+const heartbeatPeriod = 30 * time.Second
+
+// Dispatcher forwards a new notification onto subscribers.
+type Dispatcher interface {
+	Start()
+	Send(notification Notification)
+	Subscribers() []Subscriber
+	Registrator
+}
+
+// Registrator :smirk:
+type Registrator interface {
+	Register(subscriber Subscriber)
+	Close(subscriber Subscriber)
+}
+
+// NewDispatcher creates and returns a new dispatcher
+func NewDispatcher(delay int, history History) Dispatcher {
+	return &dispatcher{
+		delay:       delay,
+		inbound:     make(chan Notification),
+		subscribers: map[Subscriber]bool{},
+		lock:        &sync.RWMutex{},
+		history:     history,
+	}
+}
 
 type dispatcher struct {
 	delay       int
@@ -16,9 +44,24 @@ type dispatcher struct {
 	history     History
 }
 
+func (d *dispatcher) Start() {
+	heartbeat := time.NewTimer(heartbeatPeriod)
+
+	for {
+		select {
+		case notification := <-d.inbound:
+			d.forwardToSubscribers(notification)
+		case <-heartbeat.C:
+			d.heartbeat()
+		}
+
+		heartbeat.Reset(heartbeatPeriod)
+	}
+}
+
 func (d *dispatcher) Send(notification Notification) {
-	log.WithField("tid", notification.PublishReference).WithField("id", notification.ID).Infof("Received event. Waiting configured delay (%vs).", d.delay)
 	go func() {
+		log.WithField("tid", notification.PublishReference).WithField("id", notification.ID).Infof("Received event. Waiting configured delay (%vs).", d.delay)
 		d.delayForCache(notification)
 		d.inbound <- notification
 	}()
@@ -29,7 +72,7 @@ func (d *dispatcher) heartbeat() {
 	defer d.lock.RUnlock()
 
 	for sub := range d.subscribers {
-		sub.NotificationChannel <- heartbeatMsg
+		sub.NotificationChannel() <- heartbeatMsg
 	}
 }
 
@@ -40,35 +83,38 @@ func (d *dispatcher) delayForCache(notification Notification) {
 func (d *dispatcher) forwardToSubscribers(notification Notification) {
 	log.WithField("tid", notification.PublishReference).WithField("id", notification.ID).Info("Forwarding to subscribers.")
 
-	d.lock.RLock()
-	defer d.lock.RUnlock()
-
-	regular, monitor, err := marshal(notification)
-	if err != nil {
-		log.WithError(err).Error("Failed to marshal notification!")
-		return
-	}
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
 	for sub := range d.subscribers {
-		if sub.IsMonitor {
-			sub.NotificationChannel <- monitor
-			continue
-		}
-
-		sub.NotificationChannel <- regular
+		log.Info(sub.address())
+		sub.send(notification)
 	}
 }
 
-func marshal(notification Notification) (string, string, error) {
-	regular, err := json.Marshal(notification)
+func (d *dispatcher) Register(subscriber Subscriber) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
-	notification.PublishReference = ""
-	notification.LastModified = ""
-	monitor, _ := json.Marshal(notification)
+	d.subscribers[subscriber] = true
+	log.WithField("subscriber", subscriber.address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Registered new subscriber")
+}
 
-	if err != nil {
-		return "", "", err
+func (d *dispatcher) Subscribers() []Subscriber {
+	d.lock.RLock()
+	defer d.lock.RUnlock()
+
+	var subs []Subscriber
+	for sub := range d.subscribers {
+		subs = append(subs, sub)
 	}
+	return subs
+}
 
-	return string(regular), string(monitor), err
+func (d *dispatcher) Close(subscriber Subscriber) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	delete(d.subscribers, subscriber)
+	log.WithField("subscriber", subscriber.address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Unregistered subscriber")
 }

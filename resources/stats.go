@@ -3,6 +3,8 @@ package resources
 import (
 	"encoding/json"
 	"net/http"
+	"reflect"
+	"time"
 
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	log "github.com/Sirupsen/logrus"
@@ -16,7 +18,7 @@ type subscriptionStats struct {
 // Stats returns subscriber stats
 func Stats(dispatcher dispatcher.Dispatcher) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		subscribers := dispatcher.GetSubscribers()
+		subscribers := dispatcher.Subscribers()
 
 		stats := subscriptionStats{
 			NrOfSubscribers: len(subscribers),
@@ -39,5 +41,29 @@ func Stats(dispatcher dispatcher.Dispatcher) func(w http.ResponseWriter, r *http
 		if err != nil {
 			log.Warnf("Error writing stats to HTTP response: %v", err.Error())
 		}
+	}
+}
+
+func (s *externalSubscriber) MarshalJSON() ([]byte, error) {
+	return json.Marshal(newSubscriberPayload(s))
+}
+
+func (m *monitorSubscriber) MarshalJSON() ([]byte, error) {
+	return json.Marshal(newSubscriberPayload(m))
+}
+
+type SubscriberPayload struct {
+	Address            string `json:"address"`
+	Since              string `json:"since"`
+	ConnectionDuration string `json:"connectionDuration"`
+	Type               string `json:"type"`
+}
+
+func newSubscriberPayload(s Subscriber) *SubscriberPayload {
+	return &SubscriberPayload{
+		Address:            s.address(),
+		Since:              s.since().Format(time.StampMilli),
+		ConnectionDuration: time.Since(s.since()).String(),
+		Type:               reflect.TypeOf(s).Elem().String(),
 	}
 }

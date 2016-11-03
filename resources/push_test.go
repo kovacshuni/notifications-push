@@ -31,6 +31,7 @@ func TestPush(t *testing.T) {
 
 	start = func(sub dispatcher.Subscriber) {
 		sub.NotificationChannel() <- "hi"
+		time.Sleep(5 * time.Millisecond)
 		w.closer <- true
 
 		assert.True(t, time.Now().After(sub.Since()))

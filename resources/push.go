@@ -43,8 +43,6 @@ func Push(registrator dispatcher.Registrator) func(w http.ResponseWriter, r *htt
 
 		for {
 			select {
-			case <-cn.CloseNotify():
-				return
 			case notification := <-s.NotificationChannel():
 				_, err := bw.WriteString("data: " + notification + "\n\n")
 				if err != nil {
@@ -60,6 +58,8 @@ func Push(registrator dispatcher.Registrator) func(w http.ResponseWriter, r *htt
 
 				flusher := w.(http.Flusher)
 				flusher.Flush()
+			case <-cn.CloseNotify():
+				return
 			}
 		}
 	}

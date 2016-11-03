@@ -9,7 +9,7 @@ import (
 )
 
 type MessageQueueHandler interface {
-	HandleMessage(queueMsg queueConsumer.Message)
+	HandleMessage(queueMsg []queueConsumer.Message)
 }
 
 type simpleMessageQueueHandler struct {
@@ -28,29 +28,35 @@ func NewMessageQueueHandler(resource string, mapper NotificationMapper, dispatch
 	}
 }
 
-func (m simpleMessageQueueHandler) HandleMessage(queueMsg queueConsumer.Message) {
-	msg := NotificationQueueMessage{queueMsg}
+func (m simpleMessageQueueHandler) HandleMessage(msgs []queueConsumer.Message) {
+	var batch []dispatcher.Notification
+	for _, queueMsg := range msgs {
+		msg := NotificationQueueMessage{queueMsg}
 
-	if msg.HasSynthTransactionID() {
-		return
+		if msg.HasSynthTransactionID() {
+			return
+		}
+
+		cmsPubEvent, err := msg.ToCmsPublicationEvent()
+		if err != nil {
+			log.Warnf("Skipping event: tid=[%v], msg=[%v]: [%v].", msg.TransactionID(), msg.Body, err)
+			return
+		}
+
+		if !cmsPubEvent.Matches(m.whiteList) {
+			log.Infof("Skipping event: tid=[%v]. Invalid resourceUri=[%v]", msg.TransactionID(), cmsPubEvent.ContentURI)
+			return
+		}
+
+		notification, err := m.mapper.MapNotification(cmsPubEvent, msg.TransactionID())
+		if err != nil {
+			log.Warnf("Skipping event: tid=[%v]. Cannot build notification for msg=[%#v] : [%v]", msg.TransactionID(), cmsPubEvent, err)
+			return
+		}
+
+		log.WithField("tid", notification.PublishReference).WithField("id", notification.ID).Infof("Received event. Waiting configured delay (%vs).", 10)
+		batch = append(batch, notification)
 	}
 
-	cmsPubEvent, err := msg.ToCmsPublicationEvent()
-	if err != nil {
-		log.Warnf("Skipping event: tid=[%v], msg=[%v]: [%v].", msg.TransactionID(), msg.Body, err)
-		return
-	}
-
-	if !cmsPubEvent.Matches(m.whiteList) {
-		log.Infof("Skipping event: tid=[%v]. Invalid resourceUri=[%v]", msg.TransactionID(), cmsPubEvent.ContentURI)
-		return
-	}
-
-	n, err := m.mapper.MapNotification(cmsPubEvent, msg.TransactionID())
-	if err != nil {
-		log.Warnf("Skipping event: tid=[%v]. Cannot build notification for msg=[%#v] : [%v]", msg.TransactionID(), cmsPubEvent, err)
-		return
-	}
-
-	m.dispatcher.Send(n)
+	m.dispatcher.Send(batch...)
 }

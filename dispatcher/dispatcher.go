@@ -14,7 +14,7 @@ const heartbeatPeriod = 30 * time.Second
 // Dispatcher forwards a new notification onto subscribers.
 type Dispatcher interface {
 	Start()
-	Send(notification Notification)
+	Send(notification ...Notification)
 	Subscribers() []Subscriber
 	Registrator
 }
@@ -59,11 +59,12 @@ func (d *dispatcher) Start() {
 	}
 }
 
-func (d *dispatcher) Send(notification Notification) {
+func (d *dispatcher) Send(notifications ...Notification) {
 	go func() {
-		log.WithField("tid", notification.PublishReference).WithField("id", notification.ID).Infof("Received event. Waiting configured delay (%vs).", d.delay)
-		d.delayForCache(notification)
-		d.inbound <- notification
+		d.delayForCache()
+		for _, n := range notifications {
+			d.inbound <- n
+		}
 	}()
 }
 
@@ -76,7 +77,7 @@ func (d *dispatcher) heartbeat() {
 	}
 }
 
-func (d *dispatcher) delayForCache(notification Notification) {
+func (d *dispatcher) delayForCache() {
 	time.Sleep(time.Duration(d.delay) * time.Second)
 }
 

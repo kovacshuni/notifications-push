@@ -18,11 +18,13 @@ func TestSyntheticMessage(t *testing.T) {
 	dispatcher := new(mocks.MockDispatcher)
 	handler := NewMessageQueueHandler("list", mapper, dispatcher)
 
-	msg := queueConsumer.Message{
-		Headers: map[string]string{
-			"X-Request-Id": "SYNTH_tid",
+	msg := []queueConsumer.Message{
+		{
+			Headers: map[string]string{
+				"X-Request-Id": "SYNTH_tid",
+			},
+			Body: "",
 		},
-		Body: "",
 	}
 
 	handler.HandleMessage(msg)
@@ -38,11 +40,13 @@ func TestFailedCMSMessageParse(t *testing.T) {
 	dispatcher := new(mocks.MockDispatcher)
 	handler := NewMessageQueueHandler("list", mapper, dispatcher)
 
-	msg := queueConsumer.Message{
-		Headers: map[string]string{
-			"X-Request-Id": "tid_summin",
+	msg := []queueConsumer.Message{
+		{
+			Headers: map[string]string{
+				"X-Request-Id": "tid_summin",
+			},
+			Body: "",
 		},
-		Body: "",
 	}
 
 	handler.HandleMessage(msg)
@@ -58,13 +62,15 @@ func TestWhitelist(t *testing.T) {
 	dispatcher := new(mocks.MockDispatcher)
 	handler := NewMessageQueueHandler("list", mapper, dispatcher)
 
-	msg := queueConsumer.Message{
-		Headers: map[string]string{
-			"X-Request-Id": "tid_summin",
+	msg := []queueConsumer.Message{
+		{
+			Headers: map[string]string{
+				"X-Request-Id": "tid_summin",
+			},
+			Body: `{
+	         "ContentURI": "something which wouldn't match"
+	      }`,
 		},
-		Body: `{
-         "ContentURI": "something which wouldn't match"
-      }`,
 	}
 
 	handler.HandleMessage(msg)
@@ -81,13 +87,15 @@ func TestFailsConversionToNotification(t *testing.T) {
 
 	handler := NewMessageQueueHandler("list", mapper, dispatcher)
 
-	msg := queueConsumer.Message{
-		Headers: map[string]string{
-			"X-Request-Id": "tid_summin",
+	msg := []queueConsumer.Message{
+		{
+			Headers: map[string]string{
+				"X-Request-Id": "tid_summin",
+			},
+			Body: `{
+	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/list/blah"
+	      }`,
 		},
-		Body: `{
-         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/list/blah"
-      }`,
 	}
 
 	handler.HandleMessage(msg)
@@ -101,18 +109,20 @@ func TestHandleMessage(t *testing.T) {
 	}
 
 	dispatcher := new(mocks.MockDispatcher)
-	dispatcher.On("Send", mock.AnythingOfType("dispatcher.Notification")).Return()
+	dispatcher.On("Send", mock.AnythingOfType("[]dispatcher.Notification")).Return()
 
 	handler := NewMessageQueueHandler("list", mapper, dispatcher)
 
-	msg := queueConsumer.Message{
-		Headers: map[string]string{
-			"X-Request-Id": "tid_summin",
+	msg := []queueConsumer.Message{
+		{
+			Headers: map[string]string{
+				"X-Request-Id": "tid_summin",
+			},
+			Body: `{
+	         "UUID": "a uuid",
+	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/list/blah"
+	      }`,
 		},
-		Body: `{
-         "UUID": "a uuid",
-         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/list/blah"
-      }`,
 	}
 
 	handler.HandleMessage(msg)

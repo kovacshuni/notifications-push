@@ -121,7 +121,7 @@ func main() {
 		}
 
 		queueHandler := consumer.NewMessageQueueHandler(*resource, mapper, dispatcher)
-		consumer := queueConsumer.NewConsumer(consumerConfig, queueHandler.HandleMessage, http.Client{})
+		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, http.Client{})
 
 		healthcheckConfig := resources.HealthcheckConfig{Client: &http.Client{}, ConsumerConfig: consumerConfig}
 

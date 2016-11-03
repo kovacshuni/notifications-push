@@ -19,7 +19,7 @@ func (m *MockDispatcher) Start() {
 	m.Called()
 }
 
-func (m *MockDispatcher) Send(notification dispatcher.Notification) {
+func (m *MockDispatcher) Send(notification ...dispatcher.Notification) {
 	m.Called(notification)
 }
 

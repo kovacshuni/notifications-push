@@ -2,7 +2,6 @@ package dispatcher
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -41,10 +40,7 @@ func TestShoudDispatchNotificationsToMultipleSubscribers(t *testing.T) {
 	d.Register(s)
 	d.Register(m)
 
-	d.Send(n1)
-	//TODO fix this hack
-	time.Sleep(5 * time.Millisecond)
-	d.Send(n2)
+	d.Send(n1, n2)
 
 	actualN1StdMsg := <-s.NotificationChannel()
 	assert.Equal(t, expectedN1StdMsg, actualN1StdMsg, "First notification standard message dispatched properly")

@@ -1,6 +1,7 @@
 package resources
 
 import (
+	"bufio"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -44,7 +45,10 @@ func TestPush(t *testing.T) {
 	assert.Equal(t, "no-cache", w.Header().Get("Pragma"))
 	assert.Equal(t, "0", w.Header().Get("Expires"))
 
-	assert.Equal(t, "data: hi\n\n", w.Body.String())
+	reader := bufio.NewReader(w.Body)
+	body, _ := reader.ReadString(byte(rune(0))) // read to EOF
+
+	assert.Equal(t, "data: hi\n\n", body)
 
 	assert.Equal(t, 200, w.Code, "Should be OK")
 	d.AssertExpectations(t)

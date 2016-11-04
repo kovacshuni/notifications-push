@@ -81,7 +81,7 @@ func (d *dispatcher) heartbeat() {
 	d.lock.RLock()
 	defer d.lock.RUnlock()
 	for sub := range d.subscribers {
-		sub.NotificationChannel() <- heartbeatMsg
+		sub.writeOnMsgChannel(heartbeatMsg)
 	}
 }
 

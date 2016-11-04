@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"reflect"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type Subscriber interface {
 	send(n Notification) error
 	NotificationChannel() chan string
+	writeOnMsgChannel(string)
 	Address() string
 	Since() time.Time
 }
@@ -46,6 +49,18 @@ func (s *standardSubscriber) send(n Notification) error {
 	return nil
 }
 
+func (s *standardSubscriber) NotificationChannel() chan string {
+	return s.notificationChannel
+}
+
+func (s *standardSubscriber) writeOnMsgChannel(msg string) {
+	select {
+	case s.notificationChannel <- msg:
+	default:
+		log.WithField("subscriber", s.Address()).WithField("message", msg).Warn("Subscriber lagging behind...")
+	}
+}
+
 func buildStandardNotificationMsg(n Notification) (string, error) {
 	n.PublishReference = ""
 	n.LastModified = ""
@@ -63,10 +78,6 @@ func buildNotificationMsg(n Notification) (string, error) {
 	return string(jsonNotification), err
 }
 
-func (s *standardSubscriber) NotificationChannel() chan string {
-	return s.notificationChannel
-}
-
 // Monitor Subscriber implementation
 type monitorSubscriber struct {
 	*standardSubscriber
@@ -81,7 +92,7 @@ func (m *monitorSubscriber) send(n Notification) error {
 	if err != nil {
 		return err
 	}
-	m.notificationChannel <- notificationMsg
+	m.writeOnMsgChannel(notificationMsg)
 	return nil
 }
 

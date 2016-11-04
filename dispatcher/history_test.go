@@ -20,7 +20,7 @@ func TestHistory(t *testing.T) {
 		LastModified: time.Now().Format(time.RFC3339Nano),
 	})
 
-	notifications := history.Get()
+	notifications := history.Notifications()
 	assert.Equal(t, 2, len(notifications), "Should be size 2")
 
 	history.Push(Notification{
@@ -28,7 +28,7 @@ func TestHistory(t *testing.T) {
 		LastModified: time.Now().Format(time.RFC3339Nano),
 	})
 
-	notifications = history.Get()
+	notifications = history.Notifications()
 	assert.Equal(t, 2, len(notifications), "Should still be size 2")
 
 	for _, n := range notifications {

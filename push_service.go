@@ -39,7 +39,8 @@ func (p *pushService) start() {
 	ch := make(chan os.Signal)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch
-	log.Println("Termination signal received. Quitting consumeMessages function.")
+	log.Info("Termination signal received. Quitting message consumer and notification dispatcher function.")
 	p.consumer.Stop()
+	p.dispatcher.Stop()
 	wg.Wait()
 }

@@ -9,7 +9,7 @@ import (
 // History contains the last x notifications pushed out to subscribers.
 type History interface {
 	Push(notification Notification)
-	Get() []Notification
+	Notifications() []Notification
 }
 
 type inMemoryHistory struct {
@@ -36,7 +36,7 @@ func (i *inMemoryHistory) Push(n Notification) {
 	}
 }
 
-func (i *inMemoryHistory) Get() []Notification {
+func (i *inMemoryHistory) Notifications() []Notification {
 	i.mutex.RLock()
 	defer i.mutex.RUnlock()
 

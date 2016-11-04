@@ -113,7 +113,7 @@ func main() {
 		}
 
 		history := dispatcher.NewHistory(*historySize)
-		dispatcher := dispatcher.NewDispatcher(*delay, history)
+		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay)*time.Second, history)
 
 		mapper := consumer.NotificationMapper{
 			Resource:   *resource,

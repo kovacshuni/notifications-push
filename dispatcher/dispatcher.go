@@ -14,6 +14,7 @@ const heartbeatPeriod = 30 * time.Second
 // Dispatcher forwards a new notification onto subscribers.
 type Dispatcher interface {
 	Start()
+	Stop()
 	Send(notification ...Notification)
 	Subscribers() []Subscriber
 	Registrator
@@ -26,22 +27,24 @@ type Registrator interface {
 }
 
 // NewDispatcher creates and returns a new dispatcher
-func NewDispatcher(delay int, history History) Dispatcher {
+func NewDispatcher(delay time.Duration, history History) Dispatcher {
 	return &dispatcher{
 		delay:       delay,
 		inbound:     make(chan Notification),
 		subscribers: map[Subscriber]bool{},
 		lock:        &sync.RWMutex{},
 		history:     history,
+		stopChan:    make(chan bool),
 	}
 }
 
 type dispatcher struct {
-	delay       int
+	delay       time.Duration
 	inbound     chan Notification
 	subscribers map[Subscriber]bool
 	lock        *sync.RWMutex
 	history     History
+	stopChan    chan bool
 }
 
 func (d *dispatcher) Start() {
@@ -53,10 +56,37 @@ func (d *dispatcher) Start() {
 			d.forwardToSubscribers(notification)
 		case <-heartbeat.C:
 			d.heartbeat()
+		case <-d.stopChan:
+			heartbeat.Stop()
+			return
 		}
 
 		heartbeat.Reset(heartbeatPeriod)
 	}
+}
+
+func (d *dispatcher) forwardToSubscribers(notification Notification) {
+	log.WithField("tid", notification.PublishReference).WithField("resource", notification.APIURL).Info("Forwarding to subscribers.")
+
+	d.lock.RLock()
+	defer d.lock.RUnlock()
+
+	for sub := range d.subscribers {
+		sub.send(notification)
+	}
+	d.history.Push(notification)
+}
+
+func (d *dispatcher) heartbeat() {
+	d.lock.RLock()
+	defer d.lock.RUnlock()
+	for sub := range d.subscribers {
+		sub.NotificationChannel() <- heartbeatMsg
+	}
+}
+
+func (d *dispatcher) Stop() {
+	d.stopChan <- true
 }
 
 func (d *dispatcher) Send(notifications ...Notification) {
@@ -68,28 +98,8 @@ func (d *dispatcher) Send(notifications ...Notification) {
 	}()
 }
 
-func (d *dispatcher) heartbeat() {
-	d.lock.RLock()
-	defer d.lock.RUnlock()
-
-	for sub := range d.subscribers {
-		sub.NotificationChannel() <- heartbeatMsg
-	}
-}
-
 func (d *dispatcher) delayForCache() {
-	time.Sleep(time.Duration(d.delay) * time.Second)
-}
-
-func (d *dispatcher) forwardToSubscribers(notification Notification) {
-	log.WithField("tid", notification.PublishReference).WithField("id", notification.ID).Info("Forwarding to subscribers.")
-
-	d.lock.Lock()
-	defer d.lock.Unlock()
-
-	for sub := range d.subscribers {
-		sub.send(notification)
-	}
+	time.Sleep(d.delay)
 }
 
 func (d *dispatcher) Register(subscriber Subscriber) {

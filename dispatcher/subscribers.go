@@ -45,7 +45,7 @@ func (s *standardSubscriber) send(n Notification) error {
 	if err != nil {
 		return err
 	}
-	s.notificationChannel <- notificationMsg
+	s.writeOnMsgChannel(notificationMsg)
 	return nil
 }
 

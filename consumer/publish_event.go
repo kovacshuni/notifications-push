@@ -25,23 +25,23 @@ func (msg NotificationQueueMessage) TransactionID() string {
 }
 
 // ToCmsPublicationEvent converts the message to a CmsPublicationEvent
-func (msg NotificationQueueMessage) ToCmsPublicationEvent() (event CmsPublicationEvent, err error) {
+func (msg NotificationQueueMessage) ToPublicationEvent() (event PublicationEvent, err error) {
 	err = json.Unmarshal([]byte(msg.Body), &event)
 	return event, err
 }
 
-type CmsPublicationEvent struct {
+type PublicationEvent struct {
 	ContentURI   string
 	UUID         string
 	Payload      interface{}
 	LastModified string
 }
 
-func (e CmsPublicationEvent) Matches(whiteList *regexp.Regexp) bool {
+func (e PublicationEvent) Matches(whiteList *regexp.Regexp) bool {
 	return whiteList.MatchString(e.ContentURI)
 }
 
-func (e CmsPublicationEvent) HasEmptyPayload() bool {
+func (e PublicationEvent) HasEmptyPayload() bool {
 	switch v := e.Payload.(type) {
 	case nil:
 		return true

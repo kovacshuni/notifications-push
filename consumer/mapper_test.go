@@ -11,7 +11,7 @@ func TestMapToUpdateNotification(t *testing.T) {
 
 	payload := struct{ Foo string }{"bar"}
 
-	event := CmsPublicationEvent{
+	event := PublicationEvent{
 		ContentURI:   "http://list-transformer-pr-uk-up.svc.ft.com:8080/list/blah",
 		UUID:         uuid.NewV4().String(),
 		LastModified: "2016-11-02T10:54:22.234Z",
@@ -31,7 +31,7 @@ func TestMapToUpdateNotification(t *testing.T) {
 
 func TestMapToDeleteNotification(t *testing.T) {
 
-	event := CmsPublicationEvent{
+	event := PublicationEvent{
 		ContentURI:   "http://list-transformer-pr-uk-up.svc.ft.com:8080/list/blah",
 		UUID:         uuid.NewV4().String(),
 		LastModified: "2016-11-02T10:54:22.234Z",
@@ -50,7 +50,7 @@ func TestMapToDeleteNotification(t *testing.T) {
 }
 
 func TestNotificationMappingFailure(t *testing.T) {
-	event := CmsPublicationEvent{
+	event := PublicationEvent{
 		ContentURI:   "http://list-transformer-pr-uk-up.svc.ft.com:8080/list/blah",
 		LastModified: "2016-11-02T10:54:22.234Z",
 		Payload:      "",

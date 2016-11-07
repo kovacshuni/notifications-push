@@ -66,7 +66,7 @@ func (d *dispatcher) Start() {
 }
 
 func (d *dispatcher) forwardToSubscribers(notification Notification) {
-	log.WithField("tid", notification.PublishReference).WithField("resource", notification.APIURL).Info("Forwarding to subscribers.")
+	log.WithField("transaction_id", notification.PublishReference).WithField("resource", notification.APIURL).Info("Forwarding to subscribers.")
 
 	d.lock.RLock()
 	defer d.lock.RUnlock()
@@ -90,6 +90,7 @@ func (d *dispatcher) Stop() {
 }
 
 func (d *dispatcher) Send(notifications ...Notification) {
+	log.WithField("batchSize", len(notifications)).Infof("Received notifications batch. Waiting configured delay (%v).", d.delay)
 	go func() {
 		d.delayForCache()
 		for _, n := range notifications {

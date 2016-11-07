@@ -29,34 +29,41 @@ func NewMessageQueueHandler(resource string, mapper NotificationMapper, dispatch
 }
 
 func (m simpleMessageQueueHandler) HandleMessage(msgs []queueConsumer.Message) {
+	log.Info("Recieved queue message batch")
 	var batch []dispatcher.Notification
 	for _, queueMsg := range msgs {
 		msg := NotificationQueueMessage{queueMsg}
 
 		if msg.HasSynthTransactionID() {
-			return
+			continue
 		}
 
-		cmsPubEvent, err := msg.ToCmsPublicationEvent()
+		pubEvent, err := msg.ToPublicationEvent()
 		if err != nil {
-			log.Warnf("Skipping event: tid=[%v], msg=[%v]: [%v].", msg.TransactionID(), msg.Body, err)
-			return
+			log.WithField("transaction_id", msg.TransactionID()).WithField("msg", msg.Body).WithError(err).Warn("Skipping event.")
+			continue
 		}
 
-		if !cmsPubEvent.Matches(m.whiteList) {
-			log.Infof("Skipping event: tid=[%v]. Invalid resourceUri=[%v]", msg.TransactionID(), cmsPubEvent.ContentURI)
-			return
+		if !pubEvent.Matches(m.whiteList) {
+			log.WithField("transaction_id", msg.TransactionID()).WithField("contentUri", pubEvent.ContentURI).Info("Skipping event: It is not in the whitelist.")
+			continue
 		}
 
-		notification, err := m.mapper.MapNotification(cmsPubEvent, msg.TransactionID())
+		notification, err := m.mapper.MapNotification(pubEvent, msg.TransactionID())
 		if err != nil {
-			log.Warnf("Skipping event: tid=[%v]. Cannot build notification for msg=[%#v] : [%v]", msg.TransactionID(), cmsPubEvent, err)
-			return
+			log.WithField("transaction_id", msg.TransactionID()).WithField("publicationEvent", pubEvent).WithError(err).Warn("Skipping event: Cannot build notification for mmessage.")
+			continue
 		}
 
-		log.WithField("tid", notification.PublishReference).WithField("id", notification.ID).Infof("Received event. Waiting configured delay (%vs).", 10)
 		batch = append(batch, notification)
+		log.WithField("resource", notification.APIURL).WithField("transaction_id", notification.PublishReference).Info("Valid notification in message batch")
 	}
 
-	m.dispatcher.Send(batch...)
+	log.Info("Message batch filtered")
+	if len(batch) > 0 {
+		m.dispatcher.Send(batch...)
+	} else {
+		log.Info("Empty batch does not need to be forwarded to subscribers")
+	}
+
 }

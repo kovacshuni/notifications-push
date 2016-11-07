@@ -13,7 +13,7 @@ type NotificationMapper struct {
 }
 
 // MapNotification maps the given event to a new notification.
-func (n NotificationMapper) MapNotification(event CmsPublicationEvent, transactionID string) (dispatcher.Notification, error) {
+func (n NotificationMapper) MapNotification(event PublicationEvent, transactionID string) (dispatcher.Notification, error) {
 	if event.UUID == "" {
 		return dispatcher.Notification{}, errors.New("CMS publication event does not contain a UUID")
 	}

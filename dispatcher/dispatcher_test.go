@@ -16,25 +16,25 @@ var s = NewStandardSubscriber("192.168.1.3")
 
 var n1 = Notification{
 	APIURL:           "http://api.ft.com/content/7998974a-1e97-11e6-b286-cddde55ca122",
-	ID:               "http://api.ft.com/thing/7998974a-1e97-11e6-b286-cddde55ca122",
-	Type:             "http://api.ft.com/thing/ThingChangeType/UPDATE",
+	ID:               "http://www.ft.com/thing/7998974a-1e97-11e6-b286-cddde55ca122",
+	Type:             "http://www.ft.com/thing/ThingChangeType/UPDATE",
 	PublishReference: "tid_test1",
 	LastModified:     "2016-11-02T10:54:22.234Z",
 }
 
 var n2 = Notification{
 	APIURL:           "http://api.ft.com/content/7998974a-1e97-11e6-b286-cddde55ca122",
-	ID:               "http://api.ft.com/thing/7998974a-1e97-11e6-b286-cddde55ca122",
-	Type:             "http://api.ft.com/thing/ThingChangeType/DELETE",
+	ID:               "http://www.ft.com/thing/7998974a-1e97-11e6-b286-cddde55ca122",
+	Type:             "http://www.ft.com/thing/ThingChangeType/DELETE",
 	PublishReference: "tid_test2",
 	LastModified:     "2016-11-02T10:55:24.244Z",
 }
 
-var expectedN1StdMsg = `{"apiUrl":"http://api.ft.com/content/7998974a-1e97-11e6-b286-cddde55ca122","id":"http://api.ft.com/thing/7998974a-1e97-11e6-b286-cddde55ca122","type":"http://api.ft.com/thing/ThingChangeType/UPDATE"}`
-var expectedN2StdMsg = `{"apiUrl":"http://api.ft.com/content/7998974a-1e97-11e6-b286-cddde55ca122","id":"http://api.ft.com/thing/7998974a-1e97-11e6-b286-cddde55ca122","type":"http://api.ft.com/thing/ThingChangeType/DELETE"}`
+var expectedN1StdMsg = `[{"apiUrl":"http://api.ft.com/content/7998974a-1e97-11e6-b286-cddde55ca122","id":"http://www.ft.com/thing/7998974a-1e97-11e6-b286-cddde55ca122","type":"http://www.ft.com/thing/ThingChangeType/UPDATE"}]`
+var expectedN2StdMsg = `[{"apiUrl":"http://api.ft.com/content/7998974a-1e97-11e6-b286-cddde55ca122","id":"http://www.ft.com/thing/7998974a-1e97-11e6-b286-cddde55ca122","type":"http://www.ft.com/thing/ThingChangeType/DELETE"}]`
 
-var expectedN1MonitorMsg = `{"apiUrl":"http://api.ft.com/content/7998974a-1e97-11e6-b286-cddde55ca122","id":"http://api.ft.com/thing/7998974a-1e97-11e6-b286-cddde55ca122","type":"http://api.ft.com/thing/ThingChangeType/UPDATE","publishReference":"tid_test1","lastModified":"2016-11-02T10:54:22.234Z"}`
-var expectedN2MonitorMsg = `{"apiUrl":"http://api.ft.com/content/7998974a-1e97-11e6-b286-cddde55ca122","id":"http://api.ft.com/thing/7998974a-1e97-11e6-b286-cddde55ca122","type":"http://api.ft.com/thing/ThingChangeType/DELETE","publishReference":"tid_test2","lastModified":"2016-11-02T10:55:24.244Z"}`
+var expectedN1MonitorMsg = `[{"apiUrl":"http://api.ft.com/content/7998974a-1e97-11e6-b286-cddde55ca122","id":"http://www.ft.com/thing/7998974a-1e97-11e6-b286-cddde55ca122","type":"http://www.ft.com/thing/ThingChangeType/UPDATE","publishReference":"tid_test1","lastModified":"2016-11-02T10:54:22.234Z"}]`
+var expectedN2MonitorMsg = `[{"apiUrl":"http://api.ft.com/content/7998974a-1e97-11e6-b286-cddde55ca122","id":"http://www.ft.com/thing/7998974a-1e97-11e6-b286-cddde55ca122","type":"http://www.ft.com/thing/ThingChangeType/DELETE","publishReference":"tid_test2","lastModified":"2016-11-02T10:55:24.244Z"}]`
 
 func TestShoudDispatchNotificationsToMultipleSubscribers(t *testing.T) {
 	h := NewHistory(historySize)

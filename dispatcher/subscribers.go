@@ -69,7 +69,7 @@ func buildStandardNotificationMsg(n Notification) (string, error) {
 }
 
 func buildNotificationMsg(n Notification) (string, error) {
-	jsonNotification, err := json.Marshal(n)
+	jsonNotification, err := json.Marshal([]Notification{n})
 
 	if err != nil {
 		return "", err

@@ -14,6 +14,7 @@ import (
 	"github.com/Financial-Times/notifications-push/consumer"
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	"github.com/Financial-Times/notifications-push/resources"
+	"github.com/Financial-Times/service-status-go/httphandlers"
 	"github.com/jawher/mow.cli"
 )
 
@@ -144,6 +145,8 @@ func server(listen string, resource string, dispatcher dispatcher.Dispatcher, hi
 	http.HandleFunc("/__stats", resources.Stats(dispatcher))
 	http.HandleFunc("/__health", resources.Health(healthcheckConfig))
 	http.HandleFunc("/__gtg", resources.GTG(healthcheckConfig))
+	http.HandleFunc(httphandlers.BuildInfoPath, httphandlers.BuildInfoHandler)
+	http.HandleFunc(httphandlers.PingPath, httphandlers.PingHandler)
 
 	err := http.ListenAndServe(listen, nil)
 	log.Fatal(err)

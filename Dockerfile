@@ -16,8 +16,7 @@ RUN apk --update add git bzr go \
   && BUILDER="builder=$(go version)" \
   && LDFLAGS="-X '"${BUILDINFO_PACKAGE}$VERSION"' -X '"${BUILDINFO_PACKAGE}$DATETIME"' -X '"${BUILDINFO_PACKAGE}$REPOSITORY"' -X '"${BUILDINFO_PACKAGE}$REVISION"' -X '"${BUILDINFO_PACKAGE}$BUILDER"'" \
   && echo $LDFLAGS \
-  && go get ./... \
-  && echo here \
+  && go get -t ./... \
   && go build -ldflags="${LDFLAGS}" \
   && mv notifications-push /notifications-push-app \
   && rm -rf /notifications-push \

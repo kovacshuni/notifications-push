@@ -11,7 +11,7 @@ import (
 )
 
 // Push handler for push subscribers
-func Push(registrator dispatcher.Registrator) func(w http.ResponseWriter, r *http.Request) {
+func Push(registrator dispatcher.Registrar) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")

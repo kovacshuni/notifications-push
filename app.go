@@ -143,8 +143,8 @@ func server(listen string, resource string, dispatcher dispatcher.Dispatcher, hi
 	r := mux.NewRouter()
 
 	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher)).Methods("GET")
-	r.HandleFunc("/__history", resources.History(history))
-	r.HandleFunc("/__stats", resources.Stats(dispatcher))
+	r.HandleFunc("/__history", resources.History(history)).Methods("GET")
+	r.HandleFunc("/__stats", resources.Stats(dispatcher)).Methods("GET")
 
 	hc := resources.NewNotificationsPushHealthcheck(consumerConfig)
 

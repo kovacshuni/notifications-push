@@ -28,7 +28,7 @@ func NewMessageQueueHandler(resource string, mapper NotificationMapper, dispatch
 	}
 }
 
-func (m simpleMessageQueueHandler) HandleMessage(msgs []queueConsumer.Message) {
+func (qHandler *simpleMessageQueueHandler) HandleMessage(msgs []queueConsumer.Message) {
 	log.Info("Recieved queue message batch")
 	var batch []dispatcher.Notification
 	for _, queueMsg := range msgs {
@@ -44,14 +44,14 @@ func (m simpleMessageQueueHandler) HandleMessage(msgs []queueConsumer.Message) {
 			continue
 		}
 
-		if !pubEvent.Matches(m.whiteList) {
+		if !pubEvent.Matches(qHandler.whiteList) {
 			log.WithField("transaction_id", msg.TransactionID()).WithField("contentUri", pubEvent.ContentURI).Info("Skipping event: It is not in the whitelist.")
 			continue
 		}
 
-		notification, err := m.mapper.MapNotification(pubEvent, msg.TransactionID())
+		notification, err := qHandler.mapper.MapNotification(pubEvent, msg.TransactionID())
 		if err != nil {
-			log.WithField("transaction_id", msg.TransactionID()).WithField("publicationEvent", pubEvent).WithError(err).Warn("Skipping event: Cannot build notification for mmessage.")
+			log.WithField("transaction_id", msg.TransactionID()).WithField("publicationEvent", pubEvent).WithError(err).Warn("Skipping event: Cannot build notification for message.")
 			continue
 		}
 
@@ -61,7 +61,7 @@ func (m simpleMessageQueueHandler) HandleMessage(msgs []queueConsumer.Message) {
 
 	log.Info("Message batch filtered")
 	if len(batch) > 0 {
-		m.dispatcher.Send(batch...)
+		qHandler.dispatcher.Send(batch...)
 	} else {
 		log.Info("Empty batch does not need to be forwarded to subscribers")
 	}

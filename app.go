@@ -28,9 +28,9 @@ func init() {
 }
 
 func main() {
-	app := cli.App("notifications-push", "Proactively notifies subscribers about new content or lists publishes/modifications.")
+	app := cli.App("notifications-push", "Proactively notifies subscribers about new publishes/modifications.")
 	resource := app.String(cli.StringOpt{
-		Name:   "notifications_resourse",
+		Name:   "notifications_resource",
 		Value:  "",
 		Desc:   "The resource of which notifications are produced (e.g., content or lists)",
 		EnvVar: "NOTIFICATIONS_RESOURCE",
@@ -68,7 +68,7 @@ func main() {
 	apiBaseURL := app.String(cli.StringOpt{
 		Name:   "api_base_url",
 		Value:  "http://api.ft.com",
-		Desc:   "The API base URL where the content and lists are accessible",
+		Desc:   "The API base URL where resources are accessible",
 		EnvVar: "API_BASE_URL",
 	})
 	topic := app.String(cli.StringOpt{

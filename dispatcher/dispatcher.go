@@ -17,11 +17,11 @@ type Dispatcher interface {
 	Stop()
 	Send(notification ...Notification)
 	Subscribers() []Subscriber
-	Registrator
+	Registrar
 }
 
 // Registrator :smirk:
-type Registrator interface {
+type Registrar interface {
 	Register(subscriber Subscriber)
 	Close(subscriber Subscriber)
 }

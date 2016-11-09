@@ -31,7 +31,7 @@ func NewDispatcher(delay time.Duration, history History) Dispatcher {
 	return &dispatcher{
 		delay:       delay,
 		inbound:     make(chan Notification),
-		subscribers: map[Subscriber]bool{},
+		subscribers: map[Subscriber]struct{}{},
 		lock:        &sync.RWMutex{},
 		history:     history,
 		stopChan:    make(chan bool),
@@ -41,7 +41,7 @@ func NewDispatcher(delay time.Duration, history History) Dispatcher {
 type dispatcher struct {
 	delay       time.Duration
 	inbound     chan Notification
-	subscribers map[Subscriber]bool
+	subscribers map[Subscriber]struct{}
 	lock        *sync.RWMutex
 	history     History
 	stopChan    chan bool
@@ -107,7 +107,7 @@ func (d *dispatcher) Register(subscriber Subscriber) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	d.subscribers[subscriber] = true
+	d.subscribers[subscriber] = struct{}{}
 	log.WithField("subscriber", subscriber.Address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Registered new subscriber")
 }
 

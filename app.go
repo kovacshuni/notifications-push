@@ -9,7 +9,9 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 
+	fthealth "github.com/Financial-Times/go-fthealth/v1a"
 	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
 	"github.com/Financial-Times/notifications-push/consumer"
 	"github.com/Financial-Times/notifications-push/dispatcher"
@@ -124,9 +126,7 @@ func main() {
 		queueHandler := consumer.NewMessageQueueHandler(*resource, mapper, dispatcher)
 		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, http.Client{})
 
-		healthcheckConfig := resources.HealthcheckConfig{Client: &http.Client{}, ConsumerConfig: consumerConfig}
-
-		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, healthcheckConfig)
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig)
 
 		pushService := newPushService(dispatcher, consumer)
 		pushService.start()
@@ -137,16 +137,23 @@ func main() {
 	}
 }
 
-func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, healthcheckConfig resources.HealthcheckConfig) {
+func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumerConfig queueConsumer.QueueConfig) {
 	notificationsPushPath := "/" + resource + "/notifications-push"
 
-	http.HandleFunc(notificationsPushPath, resources.Push(dispatcher))
-	http.HandleFunc("/__history", resources.History(history))
-	http.HandleFunc("/__stats", resources.Stats(dispatcher))
-	http.HandleFunc("/__health", resources.Health(healthcheckConfig))
-	http.HandleFunc("/__gtg", resources.GTG(healthcheckConfig))
-	http.HandleFunc(httphandlers.BuildInfoPath, httphandlers.BuildInfoHandler)
-	http.HandleFunc(httphandlers.PingPath, httphandlers.PingHandler)
+	r := mux.NewRouter()
+
+	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher)).Methods("GET")
+	r.HandleFunc("/__history", resources.History(history))
+	r.HandleFunc("/__stats", resources.Stats(dispatcher))
+
+	hc := resources.NewNotificationsPushHealthcheck(consumerConfig)
+
+	r.HandleFunc("/__health", fthealth.Handler("Dependent services healthcheck", "Checks if all the dependent services are reachable and healthy.", hc.Check()))
+	r.HandleFunc(httphandlers.GTGPath, hc.GTG)
+	r.HandleFunc(httphandlers.BuildInfoPath, httphandlers.BuildInfoHandler)
+	r.HandleFunc(httphandlers.PingPath, httphandlers.PingHandler)
+
+	http.Handle("/", r)
 
 	err := http.ListenAndServe(listen, nil)
 	log.Fatal(err)

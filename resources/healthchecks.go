@@ -9,76 +9,67 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/Financial-Times/go-fthealth"
+	fthealth "github.com/Financial-Times/go-fthealth/v1a"
 	"github.com/Financial-Times/message-queue-gonsumer/consumer"
 )
 
-// HealthcheckConfig contains healthcheck related config (i.e. which queue we're using)
-type HealthcheckConfig struct {
+type NotificationsPushHealthcheck struct {
 	Client         *http.Client
 	ConsumerConfig consumer.QueueConfig
 }
 
-// Health returns the /__health endpoint
-func Health(config HealthcheckConfig) func(w http.ResponseWriter, r *http.Request) {
-	return fthealth.HandlerParallel("Dependent services healthcheck", "Checks if all the dependent services are reachable and healthy.", messageQueueProxyReachable(config))
-}
-
-// GTG returns the /__gtg endpoint
-func GTG(config HealthcheckConfig) func(w http.ResponseWriter, req *http.Request) {
-	return func(w http.ResponseWriter, req *http.Request) {
-		healthChecks := []func() error{checkAggregateMessageQueueProxiesReachable(config)}
-
-		for _, hCheck := range healthChecks {
-			if err := hCheck(); err != nil {
-				w.WriteHeader(http.StatusServiceUnavailable)
-				return
-			}
-		}
+func NewNotificationsPushHealthcheck(consumerConfig consumer.QueueConfig) *NotificationsPushHealthcheck {
+	return &NotificationsPushHealthcheck{
+		Client:         &http.Client{},
+		ConsumerConfig: consumerConfig,
 	}
 }
 
-func messageQueueProxyReachable(config HealthcheckConfig) fthealth.Check {
+func (hc *NotificationsPushHealthcheck) GTG(w http.ResponseWriter, req *http.Request) {
+	if _, err := hc.checkAggregateMessageQueueProxiesReachable(); err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}
+}
+
+func (hc *NotificationsPushHealthcheck) Check() fthealth.Check {
 	return fthealth.Check{
 		BusinessImpact:   "Notifications about newly modified/published content will not reach this app, nor will they reach its clients.",
 		Name:             "MessageQueueProxyReachable",
 		PanicGuide:       "https://sites.google.com/a/ft.com/technology/systems/dynamic-semantic-publishing/extra-publishing/notifications-push-runbook",
 		Severity:         1,
 		TechnicalSummary: "Message queue proxy is not reachable/healthy",
-		Checker:          checkAggregateMessageQueueProxiesReachable(config),
+		Checker:          hc.checkAggregateMessageQueueProxiesReachable,
 	}
 }
 
-func checkAggregateMessageQueueProxiesReachable(config HealthcheckConfig) func() error {
-	return func() error {
-		errMsg := ""
-		for _, address := range config.ConsumerConfig.Addrs {
-			err := checkMessageQueueProxyReachable(config, address)
-			if err == nil {
-				return nil
-			}
-			errMsg = errMsg + fmt.Sprintf("For %s there is an error %v \n", address, err.Error())
+func (hc *NotificationsPushHealthcheck) checkAggregateMessageQueueProxiesReachable() (string, error) {
+	errMsg := ""
+	for _, address := range hc.ConsumerConfig.Addrs {
+		err := hc.checkMessageQueueProxyReachable(address)
+		if err == nil {
+			return "Connectivity to proxies is OK.", nil
 		}
-		return errors.New(errMsg)
+		errMsg = errMsg + fmt.Sprintf("For %s there is an error %v \n", address, err.Error())
 	}
+	return "Error connecting to proxies", errors.New(errMsg)
 }
 
-func checkMessageQueueProxyReachable(config HealthcheckConfig, address string) error {
+func (hc *NotificationsPushHealthcheck) checkMessageQueueProxyReachable(address string) error {
 	req, err := http.NewRequest("GET", address+"/topics", nil)
 	if err != nil {
 		log.Warnf("Could not connect to proxy: %v", err.Error())
 		return err
 	}
 
-	if len(config.ConsumerConfig.AuthorizationKey) > 0 {
-		req.Header.Add("Authorization", config.ConsumerConfig.AuthorizationKey)
+	if len(hc.ConsumerConfig.AuthorizationKey) > 0 {
+		req.Header.Add("Authorization", hc.ConsumerConfig.AuthorizationKey)
 	}
 
-	if len(config.ConsumerConfig.Queue) > 0 {
-		req.Host = config.ConsumerConfig.Queue
+	if len(hc.ConsumerConfig.Queue) > 0 {
+		req.Host = hc.ConsumerConfig.Queue
 	}
 
-	resp, err := config.Client.Do(req)
+	resp, err := hc.Client.Do(req)
 	if err != nil {
 		log.Warnf("Could not connect to proxy: %v", err.Error())
 		return err
@@ -91,7 +82,7 @@ func checkMessageQueueProxyReachable(config HealthcheckConfig, address string) e
 	}
 
 	body, _ := ioutil.ReadAll(resp.Body)
-	return checkIfTopicIsPresent(body, config.ConsumerConfig.Topic)
+	return checkIfTopicIsPresent(body, hc.ConsumerConfig.Topic)
 }
 
 func checkIfTopicIsPresent(body []byte, searchedTopic string) error {

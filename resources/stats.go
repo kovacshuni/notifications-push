@@ -25,7 +25,7 @@ func Stats(dispatcher dispatcher.Dispatcher) func(w http.ResponseWriter, r *http
 
 		bytes, err := json.Marshal(stats)
 		if err != nil {
-			log.Warnf("[%v]", err)
+			log.WithError(err).Warn("Error in marshalling stats information", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -33,7 +33,7 @@ func Stats(dispatcher dispatcher.Dispatcher) func(w http.ResponseWriter, r *http
 		w.Header().Set("Content-type", "application/json")
 		b, err := w.Write(bytes)
 		if b == 0 {
-			log.Warnf("Response written to HTTP was empty.")
+			log.Warn("Response written to HTTP was empty.")
 		}
 
 		if err != nil {

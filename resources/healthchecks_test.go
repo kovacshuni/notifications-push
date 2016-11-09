@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Financial-Times/go-fthealth"
+	fthealth "github.com/Financial-Times/go-fthealth/v1a"
 	"github.com/Financial-Times/message-queue-gonsumer/consumer"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,8 +41,8 @@ func TestHealthchecks(t *testing.T) {
 	}
 
 	consumerConfig.Addrs = []string{kafka.URL}
-	config := HealthcheckConfig{Client: &http.Client{}, ConsumerConfig: consumerConfig}
-	Health(config)(w, req)
+	hc := NewNotificationsPushHealthcheck(consumerConfig)
+	fthealth.Handler("Dependent services healthcheck", "Checks if all the dependent services are reachable and healthy.", hc.Check())(w, req)
 
 	assert.Equal(t, 200, w.Code)
 
@@ -72,8 +72,8 @@ func TestTopicMissing(t *testing.T) {
 	}
 
 	consumerConfig.Addrs = []string{kafka.URL}
-	config := HealthcheckConfig{Client: &http.Client{}, ConsumerConfig: consumerConfig}
-	Health(config)(w, req)
+	hc := NewNotificationsPushHealthcheck(consumerConfig)
+	fthealth.Handler("Dependent services healthcheck", "Checks if all the dependent services are reachable and healthy.", hc.Check())(w, req)
 
 	assert.Equal(t, 200, w.Code)
 
@@ -98,8 +98,8 @@ func TestTopicsUnparseable(t *testing.T) {
 	}
 
 	consumerConfig.Addrs = []string{kafka.URL}
-	config := HealthcheckConfig{Client: &http.Client{}, ConsumerConfig: consumerConfig}
-	Health(config)(w, req)
+	hc := NewNotificationsPushHealthcheck(consumerConfig)
+	fthealth.Handler("Dependent services healthcheck", "Checks if all the dependent services are reachable and healthy.", hc.Check())(w, req)
 
 	assert.Equal(t, 200, w.Code)
 
@@ -124,8 +124,8 @@ func TestFailingKafka(t *testing.T) {
 	}
 
 	consumerConfig.Addrs = []string{kafka.URL}
-	config := HealthcheckConfig{Client: &http.Client{}, ConsumerConfig: consumerConfig}
-	Health(config)(w, req)
+	hc := NewNotificationsPushHealthcheck(consumerConfig)
+	fthealth.Handler("Dependent services healthcheck", "Checks if all the dependent services are reachable and healthy.", hc.Check())(w, req)
 
 	assert.Equal(t, 200, w.Code)
 
@@ -147,8 +147,8 @@ func TestNoKafka(t *testing.T) {
 	}
 
 	consumerConfig.Addrs = []string{"a-fake-url"}
-	config := HealthcheckConfig{Client: &http.Client{}, ConsumerConfig: consumerConfig}
-	Health(config)(w, req)
+	hc := NewNotificationsPushHealthcheck(consumerConfig)
+	fthealth.Handler("Dependent services healthcheck", "Checks if all the dependent services are reachable and healthy.", hc.Check())(w, req)
 
 	assert.Equal(t, 200, w.Code)
 
@@ -173,8 +173,8 @@ func TestGTG(t *testing.T) {
 	}
 
 	consumerConfig.Addrs = []string{kafka.URL}
-	config := HealthcheckConfig{Client: &http.Client{}, ConsumerConfig: consumerConfig}
-	GTG(config)(w, req)
+	hc := NewNotificationsPushHealthcheck(consumerConfig)
+	hc.GTG(w, req)
 
 	assert.Equal(t, 200, w.Code)
 }
@@ -187,8 +187,8 @@ func TestGTGFailing(t *testing.T) {
 	}
 
 	consumerConfig.Addrs = []string{"a-fake-url"}
-	config := HealthcheckConfig{Client: &http.Client{}, ConsumerConfig: consumerConfig}
-	GTG(config)(w, req)
+	hc := NewNotificationsPushHealthcheck(consumerConfig)
+	hc.GTG(w, req)
 
 	assert.Equal(t, 503, w.Code)
 }

@@ -1,34 +1,42 @@
 package main
 
 import (
-	"io"
-	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
+	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
+
+	fthealth "github.com/Financial-Times/go-fthealth/v1a"
 	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
+	"github.com/Financial-Times/notifications-push/consumer"
+	"github.com/Financial-Times/notifications-push/dispatcher"
+	"github.com/Financial-Times/notifications-push/resources"
+	"github.com/Financial-Times/service-status-go/httphandlers"
 	"github.com/jawher/mow.cli"
 )
 
-const logPattern = log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile | log.LUTC
+func init() {
+	f := &log.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: time.RFC3339Nano,
+	}
 
-var infoLogger *log.Logger
-var warnLogger *log.Logger
-var errorLogger *log.Logger
-
-type notificationsApp struct {
-	eventDispatcher     *eventDispatcher
-	consumerConfig      *queueConsumer.QueueConfig
-	notificationBuilder notificationBuilder
-	notificationsCache  *uniqueue
-	delay               int
+	log.SetFormatter(f)
 }
 
 func main() {
-	app := cli.App("notifications-push", "Proactively notifies subscribers about new content publishes/modifications.")
+	app := cli.App("notifications-push", "Proactively notifies subscribers about new publishes/modifications.")
+	resource := app.String(cli.StringOpt{
+		Name:   "notifications_resource",
+		Value:  "",
+		Desc:   "The resource of which notifications are produced (e.g., content or lists)",
+		EnvVar: "NOTIFICATIONS_RESOURCE",
+	})
 	consumerAddrs := app.String(cli.StringOpt{
 		Name:   "consumer_proxy_addr",
 		Value:  "",
@@ -62,7 +70,7 @@ func main() {
 	apiBaseURL := app.String(cli.StringOpt{
 		Name:   "api_base_url",
 		Value:  "http://api.ft.com",
-		Desc:   "The API base URL where the content is accessible",
+		Desc:   "The API base URL where resources are accessible",
 		EnvVar: "API_BASE_URL",
 	})
 	topic := app.String(cli.StringOpt{
@@ -83,11 +91,11 @@ func main() {
 		Desc:   "application port",
 		EnvVar: "PORT",
 	})
-	nCap := app.Int(cli.IntOpt{
-		Name:   "notifications_capacity",
+	historySize := app.Int(cli.IntOpt{
+		Name:   "notification_history_size",
 		Value:  200,
-		Desc:   "the nr of recent notifications to be saved and returned on the /notifications endpoint",
-		EnvVar: "NOTIFICATIONS_CAPACITY",
+		Desc:   "the number of recent notifications to be saved and returned on the /__history endpoint",
+		EnvVar: "NOTIFICATION_HISTORY_SIZE",
 	})
 	delay := app.Int(cli.IntOpt{
 		Name:   "notifications_delay",
@@ -97,47 +105,56 @@ func main() {
 	})
 
 	app.Action = func() {
-		dispatcher := newDispatcher()
-		go dispatcher.distributeEvents()
+		consumerConfig := queueConsumer.QueueConfig{
+			Addrs:            strings.Split(*consumerAddrs, ","),
+			Group:            *consumerGroupID,
+			Topic:            *topic,
+			Queue:            *consumerHost,
+			AuthorizationKey: *consumerAuthorizationKey,
+			AutoCommitEnable: *consumerAutoCommitEnable,
+			BackoffPeriod:    *backoff,
+		}
 
-		consumerConfig := queueConsumer.QueueConfig{}
-		consumerConfig.Addrs = strings.Split(*consumerAddrs, ",")
-		consumerConfig.Group = *consumerGroupID
-		consumerConfig.Topic = *topic
-		consumerConfig.Queue = *consumerHost
-		consumerConfig.AuthorizationKey = *consumerAuthorizationKey
-		consumerConfig.AutoCommitEnable = *consumerAutoCommitEnable
-		consumerConfig.BackoffPeriod = *backoff
+		history := dispatcher.NewHistory(*historySize)
+		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay)*time.Second, history)
 
-		infoLogger.Printf("Config: [\n\tconsumerAddrs: [%v]\n\tconsumerGroupID: [%v]\n\ttopic: [%v]\n\tconsumerAutoCommitEnable: [%v]\n\tapiBaseURL: [%v]\n\tnotifications_capacity: [%v]\n]", *consumerAddrs, *consumerGroupID, *topic, *consumerAutoCommitEnable, *apiBaseURL, *nCap)
+		mapper := consumer.NotificationMapper{
+			Resource:   *resource,
+			APIBaseURL: *apiBaseURL,
+		}
 
-		notificationsCache := newUnique(*nCap)
-		h := newHandler(dispatcher, &notificationsCache, *apiBaseURL)
-		hc := &healthcheck{client: http.Client{}, consumerConf: consumerConfig}
-		http.HandleFunc("/content/notifications-push", h.notificationsPush)
-		http.HandleFunc("/content/notifications", h.notifications)
-		http.HandleFunc("/stats", h.stats)
-		http.HandleFunc("/__health", hc.healthcheck())
-		http.HandleFunc("/__gtg", hc.gtg)
-		go func() {
-			err := http.ListenAndServe(":"+strconv.Itoa(*port), nil)
-			errorLogger.Println(err)
-		}()
+		queueHandler := consumer.NewMessageQueueHandler(*resource, mapper, dispatcher)
+		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, http.Client{})
 
-		app := notificationsApp{dispatcher, &consumerConfig, notificationBuilder{*apiBaseURL}, &notificationsCache, *delay}
-		app.consumeMessages()
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig)
+
+		pushService := newPushService(dispatcher, consumer)
+		pushService.start()
 	}
+
 	if err := app.Run(os.Args); err != nil {
-		errorLogger.Fatal(err)
+		log.Fatal(err)
 	}
 }
 
-func init() {
-	initLogs(os.Stdout, os.Stdout, os.Stderr)
-}
+func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumerConfig queueConsumer.QueueConfig) {
+	notificationsPushPath := "/" + resource + "/notifications-push"
 
-func initLogs(infoHandle io.Writer, warnHandle io.Writer, errorHandle io.Writer) {
-	infoLogger = log.New(infoHandle, "INFO  - ", logPattern)
-	warnLogger = log.New(warnHandle, "WARN  - ", logPattern)
-	errorLogger = log.New(errorHandle, "ERROR - ", logPattern)
+	r := mux.NewRouter()
+
+	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher)).Methods("GET")
+	r.HandleFunc("/__history", resources.History(history)).Methods("GET")
+	r.HandleFunc("/__stats", resources.Stats(dispatcher)).Methods("GET")
+
+	hc := resources.NewNotificationsPushHealthcheck(consumerConfig)
+
+	r.HandleFunc("/__health", fthealth.Handler("Dependent services healthcheck", "Checks if all the dependent services are reachable and healthy.", hc.Check()))
+	r.HandleFunc(httphandlers.GTGPath, hc.GTG)
+	r.HandleFunc(httphandlers.BuildInfoPath, httphandlers.BuildInfoHandler)
+	r.HandleFunc(httphandlers.PingPath, httphandlers.PingHandler)
+
+	http.Handle("/", r)
+
+	err := http.ListenAndServe(listen, nil)
+	log.Fatal(err)
 }

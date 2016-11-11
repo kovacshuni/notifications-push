@@ -110,7 +110,7 @@ func (d *dispatcher) Register(subscriber Subscriber) {
 	d.subscribers[subscriber] = struct{}{}
 	log.WithField("subscriber", subscriber.Address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Registered new subscriber")
 
-	go subscriber.writeOnMsgChannel(heartbeatMsg)
+	subscriber.writeOnMsgChannel(heartbeatMsg)
 }
 
 func (d *dispatcher) Subscribers() []Subscriber {

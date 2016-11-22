@@ -19,10 +19,9 @@ type simpleMessageQueueHandler struct {
 }
 
 // NewMessageQueueHandler returns a new message handler
-func NewMessageQueueHandler(resource string, mapper NotificationMapper, dispatcher dispatcher.Dispatcher) MessageQueueHandler {
-	whiteList := regexp.MustCompile(`^http://.*-transformer-(pr|iw)-uk-.*\.svc\.ft\.com(:\d{2,5})?/(` + resource + `)/[\w-]+.*$`)
+func NewMessageQueueHandler(whitelist *regexp.Regexp, mapper NotificationMapper, dispatcher dispatcher.Dispatcher) MessageQueueHandler {
 	return &simpleMessageQueueHandler{
-		whiteList:  whiteList,
+		whiteList:  whitelist,
 		mapper:     mapper,
 		dispatcher: dispatcher,
 	}

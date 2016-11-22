@@ -4,6 +4,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -103,6 +104,11 @@ func main() {
 		Desc:   "The time to delay each notification before forwarding to any subscribers (in seconds).",
 		EnvVar: "NOTIFICATIONS_DELAY",
 	})
+	whitelist := app.String(cli.StringOpt{
+		Name:   "whitelist",
+		Desc:   `The whitelist for incoming notifications - i.e. ^http://.*-transformer-(pr|iw)-uk-.*\.svc\.ft\.com(:\d{2,5})?/content/[\w-]+.*$`,
+		EnvVar: "WHITELIST",
+	})
 
 	app.Action = func() {
 		consumerConfig := queueConsumer.QueueConfig{
@@ -123,7 +129,13 @@ func main() {
 			APIBaseURL: *apiBaseURL,
 		}
 
-		queueHandler := consumer.NewMessageQueueHandler(*resource, mapper, dispatcher)
+		whitelistR, err := regexp.Compile(*whitelist)
+		if err != nil {
+			log.WithError(err).Fatal("Whitelist regex MUST compile!")
+			return
+		}
+
+		queueHandler := consumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
 		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, http.Client{})
 
 		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig)

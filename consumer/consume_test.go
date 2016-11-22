@@ -1,6 +1,7 @@
 package consumer
 
 import (
+	"regexp"
 	"testing"
 
 	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
@@ -9,14 +10,16 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+var defaultWhitelist = regexp.MustCompile(`^http://.*-transformer-(pr|iw)-uk-.*\.svc\.ft\.com(:\d{2,5})?/(lists)/[\w-]+.*$`)
+
 func TestSyntheticMessage(t *testing.T) {
 	mapper := NotificationMapper{
 		APIBaseURL: "test.api.ft.com",
-		Resource:   "list",
+		Resource:   "lists",
 	}
 
 	dispatcher := new(mocks.MockDispatcher)
-	handler := NewMessageQueueHandler("list", mapper, dispatcher)
+	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
 	msg := []queueConsumer.Message{
 		{
@@ -34,11 +37,11 @@ func TestSyntheticMessage(t *testing.T) {
 func TestFailedCMSMessageParse(t *testing.T) {
 	mapper := NotificationMapper{
 		APIBaseURL: "test.api.ft.com",
-		Resource:   "list",
+		Resource:   "lists",
 	}
 
 	dispatcher := new(mocks.MockDispatcher)
-	handler := NewMessageQueueHandler("list", mapper, dispatcher)
+	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
 	msg := []queueConsumer.Message{
 		{
@@ -56,11 +59,11 @@ func TestFailedCMSMessageParse(t *testing.T) {
 func TestWhitelist(t *testing.T) {
 	mapper := NotificationMapper{
 		APIBaseURL: "test.api.ft.com",
-		Resource:   "list",
+		Resource:   "lists",
 	}
 
 	dispatcher := new(mocks.MockDispatcher)
-	handler := NewMessageQueueHandler("list", mapper, dispatcher)
+	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
 	msg := []queueConsumer.Message{
 		{
@@ -85,7 +88,7 @@ func TestFailsConversionToNotification(t *testing.T) {
 
 	dispatcher := new(mocks.MockDispatcher)
 
-	handler := NewMessageQueueHandler("list", mapper, dispatcher)
+	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
 	msg := []queueConsumer.Message{
 		{
@@ -93,7 +96,7 @@ func TestFailsConversionToNotification(t *testing.T) {
 				"X-Request-Id": "tid_summin",
 			},
 			Body: `{
-	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/list/blah"
+	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah"
 	      }`,
 		},
 	}
@@ -105,13 +108,13 @@ func TestFailsConversionToNotification(t *testing.T) {
 func TestHandleMessage(t *testing.T) {
 	mapper := NotificationMapper{
 		APIBaseURL: "test.api.ft.com",
-		Resource:   "list",
+		Resource:   "lists",
 	}
 
 	dispatcher := new(mocks.MockDispatcher)
 	dispatcher.On("Send", mock.AnythingOfType("[]dispatcher.Notification")).Return()
 
-	handler := NewMessageQueueHandler("list", mapper, dispatcher)
+	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
 	msg := []queueConsumer.Message{
 		{
@@ -120,7 +123,7 @@ func TestHandleMessage(t *testing.T) {
 			},
 			Body: `{
 	         "UUID": "a uuid",
-	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/list/blah"
+	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah"
 	      }`,
 		},
 	}

@@ -80,7 +80,12 @@ To test the stream endpoint you can run the following CURL commands :
 ```
 curl -X GET "http://localhost:8080/content/notifications-push"
 curl -X GET "http://localhost:8080/lists/notifications-push?monitor=true"
+curl -X GET "https://<user>@<password>:pre-prod-up.ft.com/lists/notifications-push"
 ```
+
+**WARNING: In CoCo, this endpoint does not work under `/__notifications-push/` and `/__list-notifications-push/`.**
+The reason for this is because Vulcan does not support long polling of HTTP requests. We worked around this issue by forwarding messages through Varnish to a fixed port for both services.
+
 
 ### Notification history
 A HTTP GET to the `/__history` endpoint will return the history of the last notifications consumed from the Kakfa queue.
@@ -155,5 +160,5 @@ Example client code is provided in `bin/client` directory
 
 Useful Links
 ------------
-* Production: https://prod-up-read.ft.com/content/notifications-push (needs credentials)
-* Production: https://prod-up-read.ft.com/lists/notifications-push (needs credentials)
+* Production: https://prod-coco-up-read.ft.com/content/notifications-push (needs credentials)
+* Production: https://prod-coco-up-read.ft.com/lists/notifications-push (needs credentials)

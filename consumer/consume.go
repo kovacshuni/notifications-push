@@ -50,7 +50,7 @@ func (qHandler *simpleMessageQueueHandler) HandleMessage(msgs []queueConsumer.Me
 
 		notification, err := qHandler.mapper.MapNotification(pubEvent, msg.TransactionID())
 		if err != nil {
-			log.WithField("transaction_id", msg.TransactionID()).WithField("publicationEvent", pubEvent).WithError(err).Warn("Skipping event: Cannot build notification for message.")
+			log.WithField("transaction_id", msg.TransactionID()).WithField("msg", string(msg.Body)).WithError(err).Warn("Skipping event: Cannot build notification for message.")
 			continue
 		}
 

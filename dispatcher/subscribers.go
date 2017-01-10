@@ -8,7 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-// Subscriber reppresents the interface of a generic subscriber to a push stream
+// Subscriber represents the interface of a generic subscriber to a push stream
 type Subscriber interface {
 	send(n Notification) error
 	NotificationChannel() chan string
@@ -107,17 +107,17 @@ func buildMonitorNotificationMsg(n Notification) (string, error) {
 	return buildNotificationMsg(n)
 }
 
-// MarshalJSON returns the JSON reppresentation of a StandardSubscriber
+// MarshalJSON returns the JSON representation of a StandardSubscriber
 func (s *StandardSubscriber) MarshalJSON() ([]byte, error) {
 	return json.Marshal(newSubscriberPayload(s))
 }
 
-// MarshalJSON returns the JSON reppresentation of a MonitorSubscriber
+// MarshalJSON returns the JSON representation of a MonitorSubscriber
 func (m *MonitorSubscriber) MarshalJSON() ([]byte, error) {
 	return json.Marshal(newSubscriberPayload(m))
 }
 
-// SubscriberPayload is the JSON reppresentation of a generic subscriber
+// SubscriberPayload is the JSON representation of a generic subscriber
 type SubscriberPayload struct {
 	Address            string `json:"address"`
 	Since              string `json:"since"`

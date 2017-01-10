@@ -30,7 +30,7 @@ func (msg NotificationQueueMessage) ToPublicationEvent() (event PublicationEvent
 	return event, err
 }
 
-// PublicationEvent is the data structure that reppresents a publication event consumed from Kafka
+// PublicationEvent is the data structure that represents a publication event consumed from Kafka
 type PublicationEvent struct {
 	ContentURI   string
 	UUID         string

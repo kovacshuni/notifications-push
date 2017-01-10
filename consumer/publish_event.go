@@ -24,22 +24,27 @@ func (msg NotificationQueueMessage) TransactionID() string {
 	return msg.Headers["X-Request-Id"]
 }
 
-// ToCmsPublicationEvent converts the message to a CmsPublicationEvent
+// ToPublicationEvent converts the message to a CmsPublicationEvent
 func (msg NotificationQueueMessage) ToPublicationEvent() (event PublicationEvent, err error) {
 	err = json.Unmarshal([]byte(msg.Body), &event)
 	return event, err
 }
 
+// PublicationEvent is the data structure that reppresents a publication event consumed from Kafka
 type PublicationEvent struct {
-	ContentURI   string      `json:"contentUri"`
-	Payload      interface{} `json:"payload"`
-	LastModified string      `json:"lastModified"`
+	ContentURI   string
+	UUID         string
+	Payload      interface{}
+	LastModified string
 }
 
+// Matches is a method that returns True if the ContentURI of a publication event
+// matches a whiteList regexp
 func (e PublicationEvent) Matches(whiteList *regexp.Regexp) bool {
 	return whiteList.MatchString(e.ContentURI)
 }
 
+// HasEmptyPayload is a method that returns true if the PublicationEvent has an empty playload
 func (e PublicationEvent) HasEmptyPayload() bool {
 	switch v := e.Payload.(type) {
 	case nil:

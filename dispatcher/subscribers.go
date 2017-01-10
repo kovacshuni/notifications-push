@@ -8,6 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// Subscriber reppresents the interface of a generic subscriber to a push stream
 type Subscriber interface {
 	send(n Notification) error
 	NotificationChannel() chan string
@@ -16,31 +17,34 @@ type Subscriber interface {
 	Since() time.Time
 }
 
-// Standard Subscriber implementation
-type standardSubscriber struct {
+// StandardSubscriber implements a standard subscriber
+type StandardSubscriber struct {
 	notificationChannel chan string
 	addr                string
 	sinceTime           time.Time
 }
 
-func NewStandardSubscriber(address string) *standardSubscriber {
+// NewStandardSubscriber returns a new instance of a standard subscriber
+func NewStandardSubscriber(address string) *StandardSubscriber {
 	notificationChannel := make(chan string, 16)
-	return &standardSubscriber{
+	return &StandardSubscriber{
 		notificationChannel: notificationChannel,
 		addr:                address,
 		sinceTime:           time.Now(),
 	}
 }
 
-func (s *standardSubscriber) Address() string {
+// Address returns the IP address of the standard subscriber
+func (s *StandardSubscriber) Address() string {
 	return s.addr
 }
 
-func (s *standardSubscriber) Since() time.Time {
+// Since returns the time since a subscriber have been registered
+func (s *StandardSubscriber) Since() time.Time {
 	return s.sinceTime
 }
 
-func (s *standardSubscriber) send(n Notification) error {
+func (s *StandardSubscriber) send(n Notification) error {
 	notificationMsg, err := buildStandardNotificationMsg(n)
 	if err != nil {
 		return err
@@ -49,11 +53,13 @@ func (s *standardSubscriber) send(n Notification) error {
 	return nil
 }
 
-func (s *standardSubscriber) NotificationChannel() chan string {
+// NotificationChannel returns the channel that can be used to send
+// notifications to the standard subscriber
+func (s *StandardSubscriber) NotificationChannel() chan string {
 	return s.notificationChannel
 }
 
-func (s *standardSubscriber) writeOnMsgChannel(msg string) {
+func (s *StandardSubscriber) writeOnMsgChannel(msg string) {
 	select {
 	case s.notificationChannel <- msg:
 	default:
@@ -78,16 +84,17 @@ func buildNotificationMsg(n Notification) (string, error) {
 	return string(jsonNotification), err
 }
 
-// Monitor Subscriber implementation
-type monitorSubscriber struct {
-	*standardSubscriber
+// MonitorSubscriber implements a Monitor subscriber
+type MonitorSubscriber struct {
+	*StandardSubscriber
 }
 
-func NewMonitorSubscriber(address string) *monitorSubscriber {
-	return &monitorSubscriber{NewStandardSubscriber(address)}
+// NewMonitorSubscriber returns a new instance of a Monitor subscriber
+func NewMonitorSubscriber(address string) *MonitorSubscriber {
+	return &MonitorSubscriber{NewStandardSubscriber(address)}
 }
 
-func (m *monitorSubscriber) send(n Notification) error {
+func (m *MonitorSubscriber) send(n Notification) error {
 	notificationMsg, err := buildMonitorNotificationMsg(n)
 	if err != nil {
 		return err
@@ -100,14 +107,17 @@ func buildMonitorNotificationMsg(n Notification) (string, error) {
 	return buildNotificationMsg(n)
 }
 
-func (s *standardSubscriber) MarshalJSON() ([]byte, error) {
+// MarshalJSON returns the JSON reppresentation of a StandardSubscriber
+func (s *StandardSubscriber) MarshalJSON() ([]byte, error) {
 	return json.Marshal(newSubscriberPayload(s))
 }
 
-func (m *monitorSubscriber) MarshalJSON() ([]byte, error) {
+// MarshalJSON returns the JSON reppresentation of a MonitorSubscriber
+func (m *MonitorSubscriber) MarshalJSON() ([]byte, error) {
 	return json.Marshal(newSubscriberPayload(m))
 }
 
+// SubscriberPayload is the JSON reppresentation of a generic subscriber
 type SubscriberPayload struct {
 	Address            string `json:"address"`
 	Since              string `json:"since"`

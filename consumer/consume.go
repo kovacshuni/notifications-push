@@ -8,6 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// MessageQueueHandler is a generic interface for implementation of components to hendle messages form the kafka queue.
 type MessageQueueHandler interface {
 	HandleMessage(queueMsg []queueConsumer.Message)
 }

@@ -20,7 +20,8 @@ type Dispatcher interface {
 	Registrar
 }
 
-// Registrator :smirk:
+// Registrar (aka Registrator :smirk:) is the interface for a component that
+// manages subscriber registration
 type Registrar interface {
 	Register(subscriber Subscriber)
 	Close(subscriber Subscriber)

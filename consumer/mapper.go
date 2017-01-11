@@ -13,6 +13,7 @@ type NotificationMapper struct {
 	Resource   string
 }
 
+// UUIDRegexp enables to check if a string matches a UUID
 var UUIDRegexp = regexp.MustCompile("[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}")
 
 // MapNotification maps the given event to a new notification.

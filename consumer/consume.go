@@ -8,6 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// MessageQueueHandler is a generic interface for implementation of components to hendle messages form the kafka queue.
 type MessageQueueHandler interface {
 	HandleMessage(queueMsg []queueConsumer.Message)
 }
@@ -28,7 +29,7 @@ func NewMessageQueueHandler(whitelist *regexp.Regexp, mapper NotificationMapper,
 }
 
 func (qHandler *simpleMessageQueueHandler) HandleMessage(msgs []queueConsumer.Message) {
-	log.Info("Recieved queue message batch")
+	log.Info("Received queue message batch")
 	var batch []dispatcher.Notification
 	for _, queueMsg := range msgs {
 		msg := NotificationQueueMessage{queueMsg}

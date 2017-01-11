@@ -1,8 +1,8 @@
-FROM alpine:3.4
+FROM alpine:3.5
 
 COPY . .git /notifications-push/
 
-RUN apk --update add git bzr go \
+RUN apk --update add git go libc-dev \
   && export GOPATH=/gopath \
   && REPO_PATH="github.com/Financial-Times/notifications-push" \
   && mkdir -p $GOPATH/src/${REPO_PATH} \
@@ -21,7 +21,7 @@ RUN apk --update add git bzr go \
   && mv notifications-push /notifications-push-app \
   && rm -rf /notifications-push \
   && mv /notifications-push-app /notifications-push \
-  && apk del go git bzr \
+  && apk del go git libc-dev \
   && rm -rf $GOPATH /var/cache/apk/*
 
 CMD [ "/notifications-push" ]

@@ -8,6 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// Subscriber represents the interface of a generic subscriber to a push stream
 type Subscriber interface {
 	send(n Notification) error
 	NotificationChannel() chan string
@@ -16,14 +17,15 @@ type Subscriber interface {
 	Since() time.Time
 }
 
-// Standard Subscriber implementation
+// StandardSubscriber implements a standard subscriber
 type standardSubscriber struct {
 	notificationChannel chan string
 	addr                string
 	sinceTime           time.Time
 }
 
-func NewStandardSubscriber(address string) *standardSubscriber {
+// NewStandardSubscriber returns a new instance of a standard subscriber
+func NewStandardSubscriber(address string) Subscriber {
 	notificationChannel := make(chan string, 16)
 	return &standardSubscriber{
 		notificationChannel: notificationChannel,
@@ -32,10 +34,12 @@ func NewStandardSubscriber(address string) *standardSubscriber {
 	}
 }
 
+// Address returns the IP address of the standard subscriber
 func (s *standardSubscriber) Address() string {
 	return s.addr
 }
 
+// Since returns the time since a subscriber have been registered
 func (s *standardSubscriber) Since() time.Time {
 	return s.sinceTime
 }
@@ -49,6 +53,8 @@ func (s *standardSubscriber) send(n Notification) error {
 	return nil
 }
 
+// NotificationChannel returns the channel that can be used to send
+// notifications to the standard subscriber
 func (s *standardSubscriber) NotificationChannel() chan string {
 	return s.notificationChannel
 }
@@ -78,12 +84,13 @@ func buildNotificationMsg(n Notification) (string, error) {
 	return string(jsonNotification), err
 }
 
-// Monitor Subscriber implementation
+// monitorSubscriber implements a Monitor subscriber
 type monitorSubscriber struct {
-	*standardSubscriber
+	Subscriber
 }
 
-func NewMonitorSubscriber(address string) *monitorSubscriber {
+// NewMonitorSubscriber returns a new instance of a Monitor subscriber
+func NewMonitorSubscriber(address string) Subscriber {
 	return &monitorSubscriber{NewStandardSubscriber(address)}
 }
 
@@ -100,14 +107,17 @@ func buildMonitorNotificationMsg(n Notification) (string, error) {
 	return buildNotificationMsg(n)
 }
 
+// MarshalJSON returns the JSON representation of a StandardSubscriber
 func (s *standardSubscriber) MarshalJSON() ([]byte, error) {
 	return json.Marshal(newSubscriberPayload(s))
 }
 
+// MarshalJSON returns the JSON representation of a MonitorSubscriber
 func (m *monitorSubscriber) MarshalJSON() ([]byte, error) {
 	return json.Marshal(newSubscriberPayload(m))
 }
 
+// SubscriberPayload is the JSON representation of a generic subscriber
 type SubscriberPayload struct {
 	Address            string `json:"address"`
 	Since              string `json:"since"`

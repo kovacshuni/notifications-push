@@ -18,16 +18,16 @@ type Subscriber interface {
 }
 
 // StandardSubscriber implements a standard subscriber
-type StandardSubscriber struct {
+type standardSubscriber struct {
 	notificationChannel chan string
 	addr                string
 	sinceTime           time.Time
 }
 
 // NewStandardSubscriber returns a new instance of a standard subscriber
-func NewStandardSubscriber(address string) *StandardSubscriber {
+func NewStandardSubscriber(address string) Subscriber {
 	notificationChannel := make(chan string, 16)
-	return &StandardSubscriber{
+	return &standardSubscriber{
 		notificationChannel: notificationChannel,
 		addr:                address,
 		sinceTime:           time.Now(),
@@ -35,16 +35,16 @@ func NewStandardSubscriber(address string) *StandardSubscriber {
 }
 
 // Address returns the IP address of the standard subscriber
-func (s *StandardSubscriber) Address() string {
+func (s *standardSubscriber) Address() string {
 	return s.addr
 }
 
 // Since returns the time since a subscriber have been registered
-func (s *StandardSubscriber) Since() time.Time {
+func (s *standardSubscriber) Since() time.Time {
 	return s.sinceTime
 }
 
-func (s *StandardSubscriber) send(n Notification) error {
+func (s *standardSubscriber) send(n Notification) error {
 	notificationMsg, err := buildStandardNotificationMsg(n)
 	if err != nil {
 		return err
@@ -55,11 +55,11 @@ func (s *StandardSubscriber) send(n Notification) error {
 
 // NotificationChannel returns the channel that can be used to send
 // notifications to the standard subscriber
-func (s *StandardSubscriber) NotificationChannel() chan string {
+func (s *standardSubscriber) NotificationChannel() chan string {
 	return s.notificationChannel
 }
 
-func (s *StandardSubscriber) writeOnMsgChannel(msg string) {
+func (s *standardSubscriber) writeOnMsgChannel(msg string) {
 	select {
 	case s.notificationChannel <- msg:
 	default:
@@ -84,17 +84,17 @@ func buildNotificationMsg(n Notification) (string, error) {
 	return string(jsonNotification), err
 }
 
-// MonitorSubscriber implements a Monitor subscriber
-type MonitorSubscriber struct {
-	*StandardSubscriber
+// monitorSubscriber implements a Monitor subscriber
+type monitorSubscriber struct {
+	Subscriber
 }
 
 // NewMonitorSubscriber returns a new instance of a Monitor subscriber
-func NewMonitorSubscriber(address string) *MonitorSubscriber {
-	return &MonitorSubscriber{NewStandardSubscriber(address)}
+func NewMonitorSubscriber(address string) Subscriber {
+	return &monitorSubscriber{NewStandardSubscriber(address)}
 }
 
-func (m *MonitorSubscriber) send(n Notification) error {
+func (m *monitorSubscriber) send(n Notification) error {
 	notificationMsg, err := buildMonitorNotificationMsg(n)
 	if err != nil {
 		return err
@@ -108,12 +108,12 @@ func buildMonitorNotificationMsg(n Notification) (string, error) {
 }
 
 // MarshalJSON returns the JSON representation of a StandardSubscriber
-func (s *StandardSubscriber) MarshalJSON() ([]byte, error) {
+func (s *standardSubscriber) MarshalJSON() ([]byte, error) {
 	return json.Marshal(newSubscriberPayload(s))
 }
 
 // MarshalJSON returns the JSON representation of a MonitorSubscriber
-func (m *MonitorSubscriber) MarshalJSON() ([]byte, error) {
+func (m *monitorSubscriber) MarshalJSON() ([]byte, error) {
 	return json.Marshal(newSubscriberPayload(m))
 }
 

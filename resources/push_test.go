@@ -18,8 +18,8 @@ var start func(sub dispatcher.Subscriber)
 func TestPushStandardSubscriber(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.StandardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.StandardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -58,8 +58,8 @@ func TestPushStandardSubscriber(t *testing.T) {
 func TestPushMonitorSubscriber(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.MonitorSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.MonitorSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatcher.monitorSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatcher.monitorSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push?monitor=true", nil)

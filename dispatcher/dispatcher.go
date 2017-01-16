@@ -67,12 +67,14 @@ func (d *dispatcher) Start() {
 }
 
 func (d *dispatcher) forwardToSubscribers(notification Notification) {
-	log.WithField("transaction_id", notification.PublishReference).WithField("resource", notification.APIURL).Info("Forwarding to subscribers.")
-
 	d.lock.RLock()
 	defer d.lock.RUnlock()
-
 	for sub := range d.subscribers {
+		log.WithField("transaction_id", notification.PublishReference).
+			WithField("resource", notification.APIURL).
+			WithField("subscriberAddress", sub.Address()).
+			WithField("subscriberSince", sub.Since().Format(time.RFC3339)).
+			Info("Forwarding to subscribers.")
 		sub.send(notification)
 	}
 	d.history.Push(notification)

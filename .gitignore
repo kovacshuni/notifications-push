@@ -3,3 +3,5 @@
 /notifications-push
 /notifications-push-client
 /.env
+*.iml
+

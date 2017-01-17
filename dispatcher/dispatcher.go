@@ -70,12 +70,18 @@ func (d *dispatcher) forwardToSubscribers(notification Notification) {
 	d.lock.RLock()
 	defer d.lock.RUnlock()
 	for sub := range d.subscribers {
-		log.WithField("transaction_id", notification.PublishReference).
+		err := sub.send(notification)
+		entry := log.WithField("transaction_id", notification.PublishReference).
 			WithField("resource", notification.APIURL).
 			WithField("subscriberAddress", sub.Address()).
-			WithField("subscriberSince", sub.Since().Format(time.RFC3339)).
-			Info("Forwarding to subscribers.")
-		sub.send(notification)
+			WithField("subscriberSince", sub.Since().Format(time.RFC3339))
+		if err != nil {
+			entry.WithError(err).Warn("Failed forwarding to subscriber.")
+		} else {
+			entry.Info("Forwarding to subscriber.")
+		}
+
+
 	}
 	d.history.Push(notification)
 }

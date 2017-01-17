@@ -18,23 +18,27 @@ go test ./...
 
 * via environment variables:
 
-    export QUEUE_PROXY_ADDRS="http://ftapp14714-lvpr-uk-t:8080,http://ftapp14721-lvpr-uk-t:8080" \
-        && export NOTIFICATIONS_RESOURCE="content" \
-        && export GROUP_ID="notifications-push-yourtest" \
-        && export AUTHORIZATION_KEY="$(ssh semantic-tunnel-up.ft.com etcdctl get /ft/_credentials/kafka-bridge/authorization_key)" \
-        && export TOPIC=CmsPublicationEvents \
-        && export API_BASE_URL="http://api.ft.com" \
-        && ./notifications-push
+```
+export QUEUE_PROXY_ADDRS="http://ftapp14714-lvpr-uk-t:8080,http://ftapp14721-lvpr-uk-t:8080" \
+    && export NOTIFICATIONS_RESOURCE="content" \
+    && export GROUP_ID="notifications-push-yourtest" \
+    && export AUTHORIZATION_KEY="$(ssh semantic-tunnel-up.ft.com etcdctl get /ft/_credentials/kafka-bridge/authorization_key)" \
+    && export TOPIC=CmsPublicationEvents \
+    && export API_BASE_URL="http://api.ft.com" \
+    && ./notifications-push
+```
 
 * or via command-line parameters:
 
-    ./notifications-push \
-        --notifications_resourse="content"
-        --consumer_proxy_addr="https://kafka-proxy-iw-uk-p-1.glb.ft.com,https://kafka-proxy-iw-uk-p-2.glb.ft.com" \
-        --consumer_group_id="notifications-push" \
-        --consumer_authorization_key "$(ssh semantic-tunnel-up.ft.com etcdctl get /ft/_credentials/kafka-bridge/authorization_key)" \
-        --api-base-url="http://api.ft.com" \
-        --topic="CmsPublicationEvents"
+```
+./notifications-push \
+    --notifications_resourse="content"
+    --consumer_proxy_addr="https://kafka-proxy-iw-uk-p-1.glb.ft.com,https://kafka-proxy-iw-uk-p-2.glb.ft.com" \
+    --consumer_group_id="notifications-push" \
+    --consumer_authorization_key "$(ssh semantic-tunnel-up.ft.com etcdctl get /ft/_credentials/kafka-bridge/authorization_key)" \
+    --api-base-url="http://api.ft.com" \
+    --topic="CmsPublicationEvents"
+```
 
 NB: for the complete list of options run `./notifications-push -h`
 

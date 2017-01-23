@@ -29,7 +29,6 @@ func NewMessageQueueHandler(whitelist *regexp.Regexp, mapper NotificationMapper,
 }
 
 func (qHandler *simpleMessageQueueHandler) HandleMessage(msgs []queueConsumer.Message) {
-	log.Info("Received queue message batch")
 	var batch []dispatcher.Notification
 	for _, queueMsg := range msgs {
 		msg := NotificationQueueMessage{queueMsg}
@@ -58,12 +57,7 @@ func (qHandler *simpleMessageQueueHandler) HandleMessage(msgs []queueConsumer.Me
 		batch = append(batch, notification)
 		log.WithField("resource", notification.APIURL).WithField("transaction_id", notification.PublishReference).Info("Valid notification in message batch")
 	}
-
-	log.Info("Message batch filtered")
 	if len(batch) > 0 {
 		qHandler.dispatcher.Send(batch...)
-	} else {
-		log.Info("Empty batch does not need to be forwarded to subscribers")
 	}
-
 }

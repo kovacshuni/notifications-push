@@ -51,7 +51,7 @@ func main() {
 			continue
 		}
 		if len(notification) == 0 {
-			log.Printf("Received 'heartbeat' event")
+			log.Println("Received 'heartbeat' event")
 			continue
 		}
 		log.Printf("Received notification: [%v]", notification)

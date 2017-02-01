@@ -21,12 +21,10 @@ func (msg NotificationQueueMessage) HasSynthTransactionID() bool {
 
 // HasCarouselTransactionID checks if the message is genearted by the publish carousel
 func (msg NotificationQueueMessage) HasCarouselTransactionID() bool {
-	tid := msg.TransactionID()
-	matches, _ := regexp.MatchString(carouselTransactionIDRegExp, tid)
-	return matches
+	return carouselTransactionIDRegExp.MatchString(msg.TransactionID())
 }
 
-const carouselTransactionIDRegExp = `^(tid_[\S]+)_carousel_[\d]{10}.*$`
+var carouselTransactionIDRegExp = regexp.MustCompile(`^(tid_[\S]+)_carousel_[\d]{10}.*$`) //`^(tid_[\S]+)_carousel_[\d]{10}.*$`
 
 // TransactionID returns the message TID
 func (msg NotificationQueueMessage) TransactionID() string {

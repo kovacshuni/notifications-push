@@ -34,6 +34,12 @@ func (qHandler *simpleMessageQueueHandler) HandleMessage(msgs []queueConsumer.Me
 		msg := NotificationQueueMessage{queueMsg}
 
 		if msg.HasSynthTransactionID() {
+			log.WithField("transaction_id", msg.TransactionID()).Info("Skipping event: Synthetic transaction ID.")
+			continue
+		}
+
+		if msg.HasCarouselTransactionID() {
+			log.WithField("transaction_id", msg.TransactionID()).Info("Skipping event: Carousel publish event.")
 			continue
 		}
 

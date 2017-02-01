@@ -26,7 +26,10 @@ func TestSyntheticMessage(t *testing.T) {
 			Headers: map[string]string{
 				"X-Request-Id": "SYNTH_tid",
 			},
-			Body: "",
+			Body: `{
+	         "UUID": "a uuid",
+	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"
+	      }`,
 		},
 	}
 
@@ -130,4 +133,54 @@ func TestHandleMessage(t *testing.T) {
 
 	handler.HandleMessage(msg)
 	dispatcher.AssertExpectations(t)
+}
+
+func TestDiscardStandardCarouselPublicationEvents(t *testing.T) {
+	mapper := NotificationMapper{
+		APIBaseURL: "test.api.ft.com",
+		Resource:   "lists",
+	}
+
+	dispatcher := new(mocks.MockDispatcher)
+	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
+
+	msg := []queueConsumer.Message{
+		{
+			Headers: map[string]string{
+				"X-Request-Id": "tid_fzy2uqund8_carousel_1485954245",
+			},
+			Body: `{
+	         "UUID": "a uuid",
+	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"
+	      }`,
+		},
+	}
+
+	handler.HandleMessage(msg)
+	dispatcher.AssertNotCalled(t, "Send")
+}
+
+func TestDiscardCarouselPublicationEventsWithGeneratedTransactionID(t *testing.T) {
+	mapper := NotificationMapper{
+		APIBaseURL: "test.api.ft.com",
+		Resource:   "lists",
+	}
+
+	dispatcher := new(mocks.MockDispatcher)
+	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
+
+	msg := []queueConsumer.Message{
+		{
+			Headers: map[string]string{
+				"X-Request-Id": "tid_fzy2uqund8_carousel_1485954245_gentx",
+			},
+			Body: `{
+	         "UUID": "a uuid",
+	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"
+	      }`,
+		},
+	}
+
+	handler.HandleMessage(msg)
+	dispatcher.AssertNotCalled(t, "Send")
 }

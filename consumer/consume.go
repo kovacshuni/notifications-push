@@ -33,19 +33,19 @@ func (qHandler *simpleMessageQueueHandler) HandleMessage(msgs []queueConsumer.Me
 	for _, queueMsg := range msgs {
 		msg := NotificationQueueMessage{queueMsg}
 
-		if msg.HasSynthTransactionID() {
-			log.WithField("transaction_id", msg.TransactionID()).Info("Skipping event: Synthetic transaction ID.")
+		pubEvent, err := msg.ToPublicationEvent()
+		if err != nil {
+			log.WithField("transaction_id", msg.TransactionID()).WithField("msg", msg.Body).WithError(err).Warn("Skipping event.")
 			continue
 		}
 
 		if msg.HasCarouselTransactionID() {
-			log.WithField("transaction_id", msg.TransactionID()).Info("Skipping event: Carousel publish event.")
+			log.WithField("transaction_id", msg.TransactionID()).WithField("contentUri", pubEvent.ContentURI).Info("Skipping event: Carousel publish event.")
 			continue
 		}
 
-		pubEvent, err := msg.ToPublicationEvent()
-		if err != nil {
-			log.WithField("transaction_id", msg.TransactionID()).WithField("msg", msg.Body).WithError(err).Warn("Skipping event.")
+		if msg.HasSynthTransactionID() {
+			log.WithField("transaction_id", msg.TransactionID()).WithField("contentUri", pubEvent.ContentURI).Info("Skipping event: Synthetic transaction ID.")
 			continue
 		}
 

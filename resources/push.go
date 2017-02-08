@@ -8,7 +8,6 @@ import (
 
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	log "github.com/Sirupsen/logrus"
-	"reflect"
 )
 
 // Push handler for push subscribers

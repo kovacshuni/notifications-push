@@ -32,10 +32,11 @@ func Push(reg dispatcher.Registrar) func(w http.ResponseWriter, r *http.Request)
 
 		var s dispatcher.Subscriber
 
+		clientAddr := getClientAddr(r)
 		if isMonitor {
-			s = dispatcher.NewMonitorSubscriber(getClientAddr(r))
+			s = dispatcher.NewMonitorSubscriber(clientAddr)
 		} else {
-			s = dispatcher.NewStandardSubscriber(getClientAddr(r))
+			s = dispatcher.NewStandardSubscriber(clientAddr)
 		}
 
 		reg.Register(s)
@@ -59,6 +60,7 @@ func Push(reg dispatcher.Registrar) func(w http.ResponseWriter, r *http.Request)
 				flusher := w.(http.Flusher)
 				flusher.Flush()
 			case <-cn.CloseNotify():
+				log.WithField("subscriber", clientAddr).Info("Connection is being closed to subscriber")
 				return
 			}
 		}

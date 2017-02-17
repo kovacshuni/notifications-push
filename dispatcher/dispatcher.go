@@ -81,7 +81,6 @@ func (d *dispatcher) forwardToSubscribers(notification Notification) {
 			entry.Info("Forwarding to subscriber.")
 		}
 
-
 	}
 	d.history.Push(notification)
 }
@@ -103,6 +102,7 @@ func (d *dispatcher) Send(notifications ...Notification) {
 	go func() {
 		d.delayForCache()
 		for _, n := range notifications {
+			n.NotificationDate = time.Now().Format(time.RFC3339)
 			d.inbound <- n
 		}
 	}()

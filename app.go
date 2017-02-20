@@ -21,6 +21,8 @@ import (
 	"github.com/jawher/mow.cli"
 )
 
+const heartbeatPeriod = 30 * time.Second
+
 func init() {
 	f := &log.TextFormatter{
 		FullTimestamp:   true,
@@ -122,7 +124,7 @@ func main() {
 		}
 
 		history := dispatcher.NewHistory(*historySize)
-		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay)*time.Second, history)
+		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay)*time.Second, heartbeatPeriod, history)
 
 		mapper := consumer.NotificationMapper{
 			Resource:   *resource,

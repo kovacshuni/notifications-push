@@ -9,15 +9,16 @@ import (
 
 func TestHistory(t *testing.T) {
 	history := NewHistory(2)
+	lastModified := time.Now()
 
 	history.Push(Notification{
 		ID:           "note1",
-		LastModified: time.Now().Format(time.RFC3339Nano),
+		LastModified: lastModified.Add(-2 * time.Second).Format(time.RFC3339Nano),
 	})
 
 	history.Push(Notification{
 		ID:           "note2",
-		LastModified: time.Now().Format(time.RFC3339Nano),
+		LastModified: lastModified.Add(-1 * time.Second).Format(time.RFC3339Nano),
 	})
 
 	notifications := history.Notifications()
@@ -25,7 +26,7 @@ func TestHistory(t *testing.T) {
 
 	history.Push(Notification{
 		ID:           "note3",
-		LastModified: time.Now().Format(time.RFC3339Nano),
+		LastModified: lastModified.Format(time.RFC3339Nano),
 	})
 
 	notifications = history.Notifications()

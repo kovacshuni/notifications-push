@@ -14,7 +14,6 @@ import (
 var consumerConfig = consumer.QueueConfig{
 	Group:            "push-group",
 	Topic:            "content-notifications",
-	Queue:            "host",
 	AuthorizationKey: "my-first-auth-key",
 }
 

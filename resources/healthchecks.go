@@ -70,10 +70,6 @@ func (hc *NotificationsPushHealthcheck) checkMessageQueueProxyReachable(address 
 		req.Header.Add("Authorization", hc.ConsumerConfig.AuthorizationKey)
 	}
 
-	if len(hc.ConsumerConfig.Queue) > 0 {
-		req.Host = hc.ConsumerConfig.Queue
-	}
-
 	resp, err := hc.Client.Do(req)
 	if err != nil {
 		log.Warnf("Could not connect to proxy: %v", err.Error())

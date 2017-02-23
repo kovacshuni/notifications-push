@@ -44,12 +44,6 @@ func main() {
 		Desc:   "Comma separated kafka proxy hosts for message consuming.",
 		EnvVar: "QUEUE_PROXY_ADDRS",
 	})
-	consumerHost := app.String(cli.StringOpt{
-		Name:   "consumer_host_header",
-		Value:  "",
-		Desc:   "Host header for consumer proxy.",
-		EnvVar: "QUEUE_HOST",
-	})
 	consumerGroupID := app.String(cli.StringOpt{
 		Name:   "consumer_group_id",
 		Value:  "",
@@ -115,7 +109,6 @@ func main() {
 			Addrs:            strings.Split(*consumerAddrs, ","),
 			Group:            *consumerGroupID,
 			Topic:            *topic,
-			Queue:            *consumerHost,
 			AuthorizationKey: *consumerAuthorizationKey,
 			AutoCommitEnable: *consumerAutoCommitEnable,
 			BackoffPeriod:    *backoff,

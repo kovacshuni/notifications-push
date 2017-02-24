@@ -272,7 +272,7 @@ func verifyNotification(t *testing.T, expected Notification, notBefore time.Time
 		assert.Equal(t, expected.LastModified, actual.LastModified, "LastModified")
 		assert.Equal(t, expected.PublishReference, actual.PublishReference, "PublishReference")
 
-		actualDate, _ := time.Parse(time.RFC3339, actual.NotificationDate)
+		actualDate, _ := time.Parse(rfc3339Millis, actual.NotificationDate)
 		assert.False(t, actualDate.Before(notBefore), "notificationDate is too early")
 		assert.False(t, actualDate.After(notAfter), "notificationDate is too late")
 	}

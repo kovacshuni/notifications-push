@@ -8,7 +8,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-const heartbeatMsg = "[]"
+const (
+	heartbeatMsg  = "[]"
+	rfc3339Millis = "2006-01-02T15:04:05.000Z07:00"
+)
 
 // Dispatcher forwards a new notification onto subscribers.
 type Dispatcher interface {
@@ -103,7 +106,7 @@ func (d *dispatcher) Send(notifications ...Notification) {
 	go func() {
 		d.delayForCache()
 		for _, n := range notifications {
-			n.NotificationDate = time.Now().Format(time.RFC3339)
+			n.NotificationDate = time.Now().Format(rfc3339Millis)
 			d.inbound <- n
 		}
 	}()

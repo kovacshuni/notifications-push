@@ -8,8 +8,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-const heartbeatMsg = "[]"
-const heartbeatPeriod = 30 * time.Second
+const (
+	heartbeatMsg  = "[]"
+	rfc3339Millis = "2006-01-02T15:04:05.000Z07:00"
+)
 
 // Dispatcher forwards a new notification onto subscribers.
 type Dispatcher interface {
@@ -28,28 +30,30 @@ type Registrar interface {
 }
 
 // NewDispatcher creates and returns a new dispatcher
-func NewDispatcher(delay time.Duration, history History) Dispatcher {
+func NewDispatcher(delay time.Duration, heartbeatPeriod time.Duration, history History) Dispatcher {
 	return &dispatcher{
-		delay:       delay,
-		inbound:     make(chan Notification),
-		subscribers: map[Subscriber]struct{}{},
-		lock:        &sync.RWMutex{},
-		history:     history,
-		stopChan:    make(chan bool),
+		delay:           delay,
+		heartbeatPeriod: heartbeatPeriod,
+		inbound:         make(chan Notification),
+		subscribers:     map[Subscriber]struct{}{},
+		lock:            &sync.RWMutex{},
+		history:         history,
+		stopChan:        make(chan bool),
 	}
 }
 
 type dispatcher struct {
-	delay       time.Duration
-	inbound     chan Notification
-	subscribers map[Subscriber]struct{}
-	lock        *sync.RWMutex
-	history     History
-	stopChan    chan bool
+	delay           time.Duration
+	heartbeatPeriod time.Duration
+	inbound         chan Notification
+	subscribers     map[Subscriber]struct{}
+	lock            *sync.RWMutex
+	history         History
+	stopChan        chan bool
 }
 
 func (d *dispatcher) Start() {
-	heartbeat := time.NewTimer(heartbeatPeriod)
+	heartbeat := time.NewTimer(d.heartbeatPeriod)
 
 	for {
 		select {
@@ -62,7 +66,7 @@ func (d *dispatcher) Start() {
 			return
 		}
 
-		heartbeat.Reset(heartbeatPeriod)
+		heartbeat.Reset(d.heartbeatPeriod)
 	}
 }
 
@@ -80,7 +84,6 @@ func (d *dispatcher) forwardToSubscribers(notification Notification) {
 		} else {
 			entry.Info("Forwarding to subscriber.")
 		}
-
 
 	}
 	d.history.Push(notification)
@@ -103,6 +106,7 @@ func (d *dispatcher) Send(notifications ...Notification) {
 	go func() {
 		d.delayForCache()
 		for _, n := range notifications {
+			n.NotificationDate = time.Now().Format(rfc3339Millis)
 			d.inbound <- n
 		}
 	}()

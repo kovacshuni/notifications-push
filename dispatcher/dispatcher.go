@@ -2,7 +2,6 @@ package dispatcher
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
@@ -69,14 +68,12 @@ func (d *dispatcher) Start() {
 	log.Info("Dispatcher started")
 	heartbeat := time.NewTimer(d.heartbeatPeriod)
 
+	go d.consume()
+
 	for {
 		select {
-		case msg := <-d.consumer.Messages():
-			notification, err := d.toNotification(msg)
-			if err == nil {
-				d.forwardToSubscribers(notification)
-			}
-			d.consumer.CommitUpto(msg)
+		case notification := <-d.inbound:
+			d.forwardToSubscribers(notification)
 		case <-heartbeat.C:
 			d.heartbeat()
 		case <-d.stopChan:
@@ -88,9 +85,22 @@ func (d *dispatcher) Start() {
 	}
 }
 
-func (d *dispatcher) toNotification(msg *kafka.ConsumerMessage) (Notification, error) {
-	fmt.Println(string(msg.Value))
+func (d *dispatcher) consume() {
+	for {
+		select {
+		case msg := <-d.consumer.Messages():
+			notification, err := d.toNotification(msg)
+			if err == nil {
+				d.inbound <- notification
+			}
+			d.consumer.CommitUpto(msg)
+		case <-d.stopChan:
+			return
+		}
+	}
+}
 
+func (d *dispatcher) toNotification(msg *kafka.ConsumerMessage) (Notification, error) {
 	m, err := parseMessage(msg.Value)
 	if err != nil {
 		log.WithError(err).Error("Impossible to parse kafka message")

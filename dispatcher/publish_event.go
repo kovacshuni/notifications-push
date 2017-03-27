@@ -1,16 +1,14 @@
-package consumer
+package dispatcher
 
 import (
 	"encoding/json"
 	"regexp"
 	"strings"
-
-	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
 )
 
 // NotificationQueueMessage is a wrapper for the queue consumer message type
 type NotificationQueueMessage struct {
-	queueConsumer.Message
+	message
 }
 
 // HasSynthTransactionID checks if the message is synthetic

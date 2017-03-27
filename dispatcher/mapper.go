@@ -1,10 +1,8 @@
-package consumer
+package dispatcher
 
 import (
 	"errors"
 	"regexp"
-
-	"github.com/Financial-Times/notifications-push/dispatcher"
 )
 
 // NotificationMapper maps CmsPublicationEvents to Notifications
@@ -17,10 +15,10 @@ type NotificationMapper struct {
 var UUIDRegexp = regexp.MustCompile("[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}")
 
 // MapNotification maps the given event to a new notification.
-func (n NotificationMapper) MapNotification(event PublicationEvent, transactionID string) (dispatcher.Notification, error) {
+func (n NotificationMapper) MapNotification(event PublicationEvent, transactionID string) (Notification, error) {
 	UUID := UUIDRegexp.FindString(event.ContentURI)
 	if UUID == "" {
-		return dispatcher.Notification{}, errors.New("ContentURI does not contain a UUID")
+		return Notification{}, errors.New("ContentURI does not contain a UUID")
 	}
 
 	var eventType string
@@ -30,7 +28,7 @@ func (n NotificationMapper) MapNotification(event PublicationEvent, transactionI
 		eventType = "UPDATE"
 	}
 
-	return dispatcher.Notification{
+	return Notification{
 		Type:             "http://www.ft.com/thing/ThingChangeType/" + eventType,
 		ID:               "http://www.ft.com/thing/" + UUID,
 		APIURL:           n.APIBaseURL + "/" + n.Resource + "/" + UUID,

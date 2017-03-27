@@ -1,11 +1,11 @@
 package dispatcher
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,7 +37,7 @@ type Registrar interface {
 }
 
 // NewDispatcher creates and returns a new dispatcher
-func NewDispatcher(delay time.Duration, heartbeatPeriod time.Duration, history History, consumer *consumergroup.ConsumerGroup, whiteListRegEx *regexp.Regexp) Dispatcher {
+func NewDispatcher(delay time.Duration, heartbeatPeriod time.Duration, history History, consumer *consumergroup.ConsumerGroup, whiteListRegEx *regexp.Regexp, mapper NotificationMapper) Dispatcher {
 	return &dispatcher{
 		delay:           delay,
 		heartbeatPeriod: heartbeatPeriod,
@@ -48,6 +48,7 @@ func NewDispatcher(delay time.Duration, heartbeatPeriod time.Duration, history H
 		stopChan:        make(chan bool),
 		consumer:        consumer,
 		whiteListRegEx:  whiteListRegEx,
+		mapper:          mapper,
 	}
 }
 
@@ -61,6 +62,7 @@ type dispatcher struct {
 	stopChan        chan bool
 	consumer        *consumergroup.ConsumerGroup
 	whiteListRegEx  *regexp.Regexp
+	mapper          NotificationMapper
 }
 
 func (d *dispatcher) Start() {
@@ -74,6 +76,7 @@ func (d *dispatcher) Start() {
 			if err == nil {
 				d.forwardToSubscribers(notification)
 			}
+			d.consumer.CommitUpto(msg)
 		case <-heartbeat.C:
 			d.heartbeat()
 		case <-d.stopChan:
@@ -87,33 +90,42 @@ func (d *dispatcher) Start() {
 
 func (d *dispatcher) toNotification(msg *kafka.ConsumerMessage) (Notification, error) {
 	fmt.Println(string(msg.Value))
-	var pubEvent PublicationEvent
-	err := json.Unmarshal(msg.Value, pubEvent)
+
+	m, err := parseMessage(msg.Value)
 	if err != nil {
-		log.WithError(err).Error("Impossible to transform consumed message to pub event")
+		log.WithError(err).Error("Impossible to parse kafka message")
 		return Notification{}, err
 	}
 
-	// if err != nil {
-	// 	//log.WithField("transaction_id", msg.TransactionID()).WithField("msg", msg.Body).WithError(err).Warn("Skipping event.")
-	// 	return Notification{}, err
-	// }
-	//
-	// if pubEvent.HasCarouselTransactionID() {
-	// 	log.WithField("transaction_id", msg.TransactionID()).WithField("contentUri", pubEvent.ContentURI).Info("Skipping event: Carousel publish event.")
-	// 	return Notification{}, errors.New("Carousel publish event")
-	// }
-	//
-	// if msg.HasSynthTransactionID() {
-	// 	log.WithField("transaction_id", msg.TransactionID()).WithField("contentUri", pubEvent.ContentURI).Info("Skipping event: Synthetic transaction ID.")
-	// 	return Notification{}, errors.New("Synthetic transaction ID.")
-	// }
+	nqm := NotificationQueueMessage{m}
+	pubEvent, err := nqm.ToPublicationEvent()
+
+	if err != nil {
+		log.WithError(err).Error("Impossible to transform kafka message in pub event")
+		return Notification{}, err
+	}
+
+	if nqm.HasCarouselTransactionID() {
+		log.WithField("transaction_id", nqm.TransactionID()).WithField("contentUri", pubEvent.ContentURI).Info("Skipping event: Carousel publish event.")
+		return Notification{}, errors.New("Carousel publish event")
+	}
+
+	if nqm.HasSynthTransactionID() {
+		log.WithField("transaction_id", nqm.TransactionID()).WithField("contentUri", pubEvent.ContentURI).Info("Skipping event: Synthetic transaction ID.")
+		return Notification{}, errors.New("Synthetic transaction ID.")
+	}
 
 	if !d.whiteListRegEx.MatchString(pubEvent.ContentURI) {
 		return Notification{}, errors.New("Not in whitelist")
 	}
 
-	return Notification{}, nil
+	n, err := d.mapper.MapNotification(pubEvent, nqm.TransactionID())
+	if err != nil {
+		log.WithError(err).Error("Impossible to map notification")
+		return Notification{}, err
+	}
+
+	return n, nil
 }
 
 func (d *dispatcher) forwardToSubscribers(notification Notification) {
@@ -191,9 +203,53 @@ func (d *dispatcher) Close(subscriber Subscriber) {
 	log.WithField("subscriber", subscriber.Address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Unregistered subscriber")
 }
 
-type PublicationEvent struct {
-	ContentURI   string
-	UUID         string
-	Payload      interface{}
-	LastModified string
+func parseMessage(raw []byte) (m message, err error) {
+	doubleNewLineStartIndex := getHeaderSectionEndingIndex(string(raw[:]))
+	if m.Headers, err = parseHeaders(string(raw[:doubleNewLineStartIndex])); err != nil {
+		return
+	}
+	m.Body = strings.TrimSpace(string(raw[doubleNewLineStartIndex:]))
+	return
+}
+
+type message struct {
+	Headers map[string]string
+	Body    string
+}
+
+var re = regexp.MustCompile("[\\w-]*:[\\w\\-:/. ]*")
+
+var kre = regexp.MustCompile("[\\w-]*:")
+var vre = regexp.MustCompile(":[\\w-:/. ]*")
+
+func parseHeaders(msg string) (map[string]string, error) {
+	headerLines := re.FindAllString(msg, -1)
+
+	headers := make(map[string]string)
+	for _, line := range headerLines {
+		key, value := parseHeader(line)
+		headers[key] = value
+	}
+	return headers, nil
+}
+
+func parseHeader(header string) (string, string) {
+	key := kre.FindString(header)
+	value := vre.FindString(header)
+	return key[:len(key)-1], strings.TrimSpace(value[1:])
+}
+
+func getHeaderSectionEndingIndex(msg string) int {
+	//FT msg format uses CRLF for line endings
+	i := strings.Index(msg, "\r\n\r\n")
+	if i != -1 {
+		return i
+	}
+	//fallback to UNIX line endings
+	i = strings.Index(msg, "\n\n")
+	if i != -1 {
+		return i
+	}
+	log.Printf("WARN  - message with no message body: [%s]", msg)
+	return len(msg)
 }

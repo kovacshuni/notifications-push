@@ -60,12 +60,12 @@ func main() {
 		Desc:   "consumer group",
 		EnvVar: "GROUP_ID",
 	})
-	// apiBaseURL := app.String(cli.StringOpt{
-	// 	Name:   "api_base_url",
-	// 	Value:  "http://api.ft.com",
-	// 	Desc:   "The API base URL where resources are accessible",
-	// 	EnvVar: "API_BASE_URL",
-	// })
+	apiBaseURL := app.String(cli.StringOpt{
+		Name:   "api_base_url",
+		Value:  "http://api.ft.com",
+		Desc:   "The API base URL where resources are accessible",
+		EnvVar: "API_BASE_URL",
+	})
 	topic := app.String(cli.StringOpt{
 		Name:   "topic",
 		Value:  "PostPublicationEvents",
@@ -113,6 +113,10 @@ func main() {
 			return
 		}
 
+		mapper := dispatcher.NotificationMapper{
+			Resource:   *resource,
+			APIBaseURL: *apiBaseURL,
+		}
 		//queueHandler := consumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
 		//consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, http.Client
 
@@ -139,7 +143,7 @@ func main() {
 		}()
 
 		history := dispatcher.NewHistory(*historySize)
-		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay)*time.Second, heartbeatPeriod, history, consumer, whitelistR)
+		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay)*time.Second, heartbeatPeriod, history, consumer, whitelistR, mapper)
 
 		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumer)
 

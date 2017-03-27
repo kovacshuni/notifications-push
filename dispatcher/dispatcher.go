@@ -1,11 +1,18 @@
 package dispatcher
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"reflect"
+	"regexp"
 	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/wvanbergen/kafka/consumergroup"
+
+	kafka "github.com/Shopify/sarama"
 )
 
 const (
@@ -30,7 +37,7 @@ type Registrar interface {
 }
 
 // NewDispatcher creates and returns a new dispatcher
-func NewDispatcher(delay time.Duration, heartbeatPeriod time.Duration, history History) Dispatcher {
+func NewDispatcher(delay time.Duration, heartbeatPeriod time.Duration, history History, consumer *consumergroup.ConsumerGroup, whiteListRegEx *regexp.Regexp) Dispatcher {
 	return &dispatcher{
 		delay:           delay,
 		heartbeatPeriod: heartbeatPeriod,
@@ -39,6 +46,8 @@ func NewDispatcher(delay time.Duration, heartbeatPeriod time.Duration, history H
 		lock:            &sync.RWMutex{},
 		history:         history,
 		stopChan:        make(chan bool),
+		consumer:        consumer,
+		whiteListRegEx:  whiteListRegEx,
 	}
 }
 
@@ -50,15 +59,21 @@ type dispatcher struct {
 	lock            *sync.RWMutex
 	history         History
 	stopChan        chan bool
+	consumer        *consumergroup.ConsumerGroup
+	whiteListRegEx  *regexp.Regexp
 }
 
 func (d *dispatcher) Start() {
+	log.Info("Dispatcher started")
 	heartbeat := time.NewTimer(d.heartbeatPeriod)
 
 	for {
 		select {
-		case notification := <-d.inbound:
-			d.forwardToSubscribers(notification)
+		case msg := <-d.consumer.Messages():
+			notification, err := d.toNotification(msg)
+			if err == nil {
+				d.forwardToSubscribers(notification)
+			}
 		case <-heartbeat.C:
 			d.heartbeat()
 		case <-d.stopChan:
@@ -68,6 +83,37 @@ func (d *dispatcher) Start() {
 
 		heartbeat.Reset(d.heartbeatPeriod)
 	}
+}
+
+func (d *dispatcher) toNotification(msg *kafka.ConsumerMessage) (Notification, error) {
+	fmt.Println(string(msg.Value))
+	var pubEvent PublicationEvent
+	err := json.Unmarshal(msg.Value, pubEvent)
+	if err != nil {
+		log.WithError(err).Error("Impossible to transform consumed message to pub event")
+		return Notification{}, err
+	}
+
+	// if err != nil {
+	// 	//log.WithField("transaction_id", msg.TransactionID()).WithField("msg", msg.Body).WithError(err).Warn("Skipping event.")
+	// 	return Notification{}, err
+	// }
+	//
+	// if pubEvent.HasCarouselTransactionID() {
+	// 	log.WithField("transaction_id", msg.TransactionID()).WithField("contentUri", pubEvent.ContentURI).Info("Skipping event: Carousel publish event.")
+	// 	return Notification{}, errors.New("Carousel publish event")
+	// }
+	//
+	// if msg.HasSynthTransactionID() {
+	// 	log.WithField("transaction_id", msg.TransactionID()).WithField("contentUri", pubEvent.ContentURI).Info("Skipping event: Synthetic transaction ID.")
+	// 	return Notification{}, errors.New("Synthetic transaction ID.")
+	// }
+
+	if !d.whiteListRegEx.MatchString(pubEvent.ContentURI) {
+		return Notification{}, errors.New("Not in whitelist")
+	}
+
+	return Notification{}, nil
 }
 
 func (d *dispatcher) forwardToSubscribers(notification Notification) {
@@ -143,4 +189,11 @@ func (d *dispatcher) Close(subscriber Subscriber) {
 
 	delete(d.subscribers, subscriber)
 	log.WithField("subscriber", subscriber.Address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Unregistered subscriber")
+}
+
+type PublicationEvent struct {
+	ContentURI   string
+	UUID         string
+	Payload      interface{}
+	LastModified string
 }

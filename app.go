@@ -6,19 +6,21 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 
 	fthealth "github.com/Financial-Times/go-fthealth/v1a"
-	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
-	"github.com/Financial-Times/notifications-push/consumer"
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	"github.com/Financial-Times/notifications-push/resources"
 	"github.com/Financial-Times/service-status-go/httphandlers"
 	"github.com/jawher/mow.cli"
+
+	"github.com/wvanbergen/kafka/consumergroup"
+	"github.com/wvanbergen/kazoo-go"
+
+	kafka "github.com/Shopify/sarama"
 )
 
 const heartbeatPeriod = 30 * time.Second
@@ -36,57 +38,39 @@ func main() {
 	app := cli.App("notifications-push", "Proactively notifies subscribers about new publishes/modifications.")
 	resource := app.String(cli.StringOpt{
 		Name:   "notifications_resource",
-		Value:  "",
+		Value:  "content",
 		Desc:   "The resource of which notifications are produced (e.g., content or lists)",
 		EnvVar: "NOTIFICATIONS_RESOURCE",
 	})
-	consumerAddrs := app.String(cli.StringOpt{
-		Name:   "consumer_proxy_addr",
-		Value:  "",
-		Desc:   "Comma separated kafka proxy hosts for message consuming.",
-		EnvVar: "QUEUE_PROXY_ADDRS",
+	zookeeperHost := app.String(cli.StringOpt{
+		Name:   "zookeeper_host",
+		Value:  "localhost",
+		Desc:   "Zookeerper host",
+		EnvVar: "ZOOKEEPER_HOST",
 	})
-	consumerHost := app.String(cli.StringOpt{
-		Name:   "consumer_host_header",
-		Value:  "",
-		Desc:   "Host header for consumer proxy.",
-		EnvVar: "QUEUE_HOST",
+	zookeeperPort := app.String(cli.StringOpt{
+		Name:   "zookeeper_port",
+		Value:  "2181",
+		Desc:   "Zookeerper port",
+		EnvVar: "ZOOKEEPER_PORT",
 	})
-	consumerGroupID := app.String(cli.StringOpt{
-		Name:   "consumer_group_id",
-		Value:  "",
-		Desc:   "Kafka qroup id used for message consuming.",
+	group := app.String(cli.StringOpt{
+		Name:   "group",
+		Value:  "test-notifications-push",
+		Desc:   "consumer group",
 		EnvVar: "GROUP_ID",
 	})
-	consumerAutoCommitEnable := app.Bool(cli.BoolOpt{
-		Name:   "consumer_autocommit_enable",
-		Value:  true,
-		Desc:   "Enable autocommit for small messages.",
-		EnvVar: "CONSUMER_AUTOCOMMIT_ENABLE",
-	})
-	consumerAuthorizationKey := app.String(cli.StringOpt{
-		Name:   "consumer_authorization_key",
-		Value:  "",
-		Desc:   "The authorization key required to UCS access.",
-		EnvVar: "AUTHORIZATION_KEY",
-	})
-	apiBaseURL := app.String(cli.StringOpt{
-		Name:   "api_base_url",
-		Value:  "http://api.ft.com",
-		Desc:   "The API base URL where resources are accessible",
-		EnvVar: "API_BASE_URL",
-	})
+	// apiBaseURL := app.String(cli.StringOpt{
+	// 	Name:   "api_base_url",
+	// 	Value:  "http://api.ft.com",
+	// 	Desc:   "The API base URL where resources are accessible",
+	// 	EnvVar: "API_BASE_URL",
+	// })
 	topic := app.String(cli.StringOpt{
 		Name:   "topic",
-		Value:  "",
+		Value:  "PostPublicationEvents",
 		Desc:   "Kafka topic to read from.",
 		EnvVar: "TOPIC",
-	})
-	backoff := app.Int(cli.IntOpt{
-		Name:   "backoff",
-		Value:  4,
-		Desc:   "The backoff time for the queue gonsumer.",
-		EnvVar: "CONSUMER_BACKOFF",
 	})
 	port := app.Int(cli.IntOpt{
 		Name:   "port",
@@ -113,23 +97,15 @@ func main() {
 	})
 
 	app.Action = func() {
-		consumerConfig := queueConsumer.QueueConfig{
-			Addrs:            strings.Split(*consumerAddrs, ","),
-			Group:            *consumerGroupID,
-			Topic:            *topic,
-			Queue:            *consumerHost,
-			AuthorizationKey: *consumerAuthorizationKey,
-			AutoCommitEnable: *consumerAutoCommitEnable,
-			BackoffPeriod:    *backoff,
-		}
-
-		history := dispatcher.NewHistory(*historySize)
-		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay)*time.Second, heartbeatPeriod, history)
-
-		mapper := consumer.NotificationMapper{
-			Resource:   *resource,
-			APIBaseURL: *apiBaseURL,
-		}
+		// consumerConfig := queueConsumer.QueueConfig{
+		// 	Addrs:            strings.Split(*consumerAddrs, ","),
+		// 	Group:            *consumerGroupID,
+		// 	Topic:            *topic,
+		// 	Queue:            *consumerHost,
+		// 	AuthorizationKey: *consumerAuthorizationKey,
+		// 	AutoCommitEnable: *consumerAutoCommitEnable,
+		// 	BackoffPeriod:    *backoff,
+		// }
 
 		whitelistR, err := regexp.Compile(*whitelist)
 		if err != nil {
@@ -137,12 +113,37 @@ func main() {
 			return
 		}
 
-		queueHandler := consumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
-		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, http.Client{})
+		//queueHandler := consumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
+		//consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, http.Client
 
-		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig)
+		config := consumergroup.NewConfig()
+		config.Offsets.Initial = kafka.OffsetNewest
+		config.Offsets.ProcessingTimeout = 10 * time.Second
 
-		pushService := newPushService(dispatcher, consumer)
+		var zookeeperNodes []string
+		zookeeperNodes, config.Zookeeper.Chroot = kazoo.ParseConnectionString(*zookeeperHost + ":" + *zookeeperPort)
+
+		consumer, consumerErr := consumergroup.JoinConsumerGroup(*group, []string{*topic}, zookeeperNodes, config)
+		if consumerErr != nil {
+			log.Fatalln(consumerErr)
+		}
+
+		if err != nil {
+			panic(err)
+		}
+
+		defer func() {
+			if cErr := consumer.Close(); cErr != nil {
+				log.Fatal(cErr)
+			}
+		}()
+
+		history := dispatcher.NewHistory(*historySize)
+		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay)*time.Second, heartbeatPeriod, history, consumer, whitelistR)
+
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumer)
+
+		pushService := newPushService(dispatcher)
 		pushService.start()
 	}
 
@@ -151,7 +152,7 @@ func main() {
 	}
 }
 
-func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumerConfig queueConsumer.QueueConfig) {
+func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumer *consumergroup.ConsumerGroup) {
 	notificationsPushPath := "/" + resource + "/notifications-push"
 
 	r := mux.NewRouter()
@@ -160,7 +161,7 @@ func server(listen string, resource string, dispatcher dispatcher.Dispatcher, hi
 	r.HandleFunc("/__history", resources.History(history)).Methods("GET")
 	r.HandleFunc("/__stats", resources.Stats(dispatcher)).Methods("GET")
 
-	hc := resources.NewNotificationsPushHealthcheck(consumerConfig)
+	hc := resources.NewNotificationsPushHealthcheck(consumer)
 
 	r.HandleFunc("/__health", fthealth.Handler("Dependent services healthcheck", "Checks if all the dependent services are reachable and healthy.", hc.Check()))
 	r.HandleFunc(httphandlers.GTGPath, hc.GTG)

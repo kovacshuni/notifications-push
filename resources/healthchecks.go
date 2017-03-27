@@ -1,30 +1,23 @@
 package resources
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 
-	log "github.com/Sirupsen/logrus"
-
 	fthealth "github.com/Financial-Times/go-fthealth/v1a"
-	"github.com/Financial-Times/message-queue-gonsumer/consumer"
+	"github.com/wvanbergen/kafka/consumergroup"
 )
 
 //NotificationsPushHealthcheck is the main health check for the notifications-push service
 type NotificationsPushHealthcheck struct {
-	Client         *http.Client
-	ConsumerConfig consumer.QueueConfig
+	consumer *consumergroup.ConsumerGroup
 }
 
 // NewNotificationsPushHealthcheck returns a new instance of NotificationsPushHealthcheck.
 // It requires the configuration of the consumer queue.
-func NewNotificationsPushHealthcheck(consumerConfig consumer.QueueConfig) *NotificationsPushHealthcheck {
+func NewNotificationsPushHealthcheck(consumer *consumergroup.ConsumerGroup) *NotificationsPushHealthcheck {
 	return &NotificationsPushHealthcheck{
-		Client:         &http.Client{},
-		ConsumerConfig: consumerConfig,
+		consumer: consumer,
 	}
 }
 
@@ -48,61 +41,12 @@ func (hc *NotificationsPushHealthcheck) Check() fthealth.Check {
 }
 
 func (hc *NotificationsPushHealthcheck) checkAggregateMessageQueueProxiesReachable() (string, error) {
-	errMsg := ""
-	for _, address := range hc.ConsumerConfig.Addrs {
-		err := hc.checkMessageQueueProxyReachable(address)
-		if err == nil {
-			return "Connectivity to proxies is OK.", nil
-		}
-		errMsg = errMsg + fmt.Sprintf("For %s there is an error %v \n", address, err.Error())
+	_, err := hc.consumer.InstanceRegistered()
+
+	if err == nil {
+		return "Connectivity to proxies is OK.", nil
 	}
+	errMsg := err.Error()
+
 	return "Error connecting to proxies", errors.New(errMsg)
-}
-
-func (hc *NotificationsPushHealthcheck) checkMessageQueueProxyReachable(address string) error {
-	req, err := http.NewRequest("GET", address+"/topics", nil)
-	if err != nil {
-		log.Warnf("Could not connect to proxy: %v", err.Error())
-		return err
-	}
-
-	if len(hc.ConsumerConfig.AuthorizationKey) > 0 {
-		req.Header.Add("Authorization", hc.ConsumerConfig.AuthorizationKey)
-	}
-
-	if len(hc.ConsumerConfig.Queue) > 0 {
-		req.Host = hc.ConsumerConfig.Queue
-	}
-
-	resp, err := hc.Client.Do(req)
-	if err != nil {
-		log.Warnf("Could not connect to proxy: %v", err.Error())
-		return err
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		errMsg := fmt.Sprintf("Proxy returned status: %d", resp.StatusCode)
-		return errors.New(errMsg)
-	}
-
-	body, _ := ioutil.ReadAll(resp.Body)
-	return checkIfTopicIsPresent(body, hc.ConsumerConfig.Topic)
-}
-
-func checkIfTopicIsPresent(body []byte, searchedTopic string) error {
-	var topics []string
-
-	err := json.Unmarshal(body, &topics)
-	if err != nil {
-		return fmt.Errorf("Error occurred and topic could not be found. %v", err.Error())
-	}
-
-	for _, topic := range topics {
-		if topic == searchedTopic {
-			return nil
-		}
-	}
-
-	return errors.New("Topic was not found")
 }

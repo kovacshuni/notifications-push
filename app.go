@@ -138,7 +138,7 @@ func main() {
 		}
 
 		queueHandler := consumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
-		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, http.Client{})
+		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, &http.Client{})
 
 		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig)
 

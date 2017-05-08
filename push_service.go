@@ -13,10 +13,10 @@ import (
 
 type pushService struct {
 	dispatcher dispatcher.Dispatcher
-	consumer   queueConsumer.Consumer
+	consumer   queueConsumer.MessageConsumer
 }
 
-func newPushService(d dispatcher.Dispatcher, consumer queueConsumer.Consumer) *pushService {
+func newPushService(d dispatcher.Dispatcher, consumer queueConsumer.MessageConsumer) *pushService {
 	return &pushService{
 		dispatcher: d,
 		consumer:   consumer,

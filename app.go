@@ -9,15 +9,15 @@ import (
 	"strings"
 	"time"
 
+	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
+	"github.com/Financial-Times/service-status-go/httphandlers"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+	"github.com/jawher/mow.cli"
 
-	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
 	"github.com/Financial-Times/notifications-push/consumer"
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	"github.com/Financial-Times/notifications-push/resources"
-	"github.com/Financial-Times/service-status-go/httphandlers"
-	"github.com/jawher/mow.cli"
 )
 
 const heartbeatPeriod = 30 * time.Second

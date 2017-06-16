@@ -12,7 +12,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 
-	fthealth "github.com/Financial-Times/go-fthealth/v1a"
 	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
 	"github.com/Financial-Times/notifications-push/consumer"
 	"github.com/Financial-Times/notifications-push/dispatcher"
@@ -140,7 +139,7 @@ func main() {
 		queueHandler := consumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
 		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, &http.Client{})
 
-		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig)
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, &consumerConfig)
 
 		pushService := newPushService(dispatcher, consumer)
 		pushService.start()
@@ -151,7 +150,7 @@ func main() {
 	}
 }
 
-func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumerConfig queueConsumer.QueueConfig) {
+func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumerConfig *queueConsumer.QueueConfig) {
 	notificationsPushPath := "/" + resource + "/notifications-push"
 
 	r := mux.NewRouter()
@@ -160,10 +159,10 @@ func server(listen string, resource string, dispatcher dispatcher.Dispatcher, hi
 	r.HandleFunc("/__history", resources.History(history)).Methods("GET")
 	r.HandleFunc("/__stats", resources.Stats(dispatcher)).Methods("GET")
 
-	hc := resources.NewNotificationsPushHealthcheck(consumerConfig)
+	hc := resources.NewHealthCheck(consumerConfig)
 
-	r.HandleFunc("/__health", fthealth.Handler("Dependent services healthcheck", "Checks if all the dependent services are reachable and healthy.", hc.Check()))
-	r.HandleFunc(httphandlers.GTGPath, hc.GTG)
+	r.HandleFunc("/__health", hc.Health())
+	r.HandleFunc(httphandlers.GTGPath, httphandlers.NewGoodToGoHandler(hc.GTG))
 	r.HandleFunc(httphandlers.BuildInfoPath, httphandlers.BuildInfoHandler)
 	r.HandleFunc(httphandlers.PingPath, httphandlers.PingHandler)
 

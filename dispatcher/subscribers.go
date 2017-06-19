@@ -70,6 +70,7 @@ func (s *standardSubscriber) writeOnMsgChannel(msg string) {
 func buildStandardNotificationMsg(n Notification) (string, error) {
 	n.PublishReference = ""
 	n.LastModified = ""
+	n.NotificationDate = ""
 
 	return buildNotificationMsg(n)
 }

@@ -5,3 +5,5 @@
 /.env
 *.iml
 
+/.project
+vendor/*/

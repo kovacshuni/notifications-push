@@ -144,7 +144,7 @@ func TestDiscardStandardCarouselPublicationEvents(t *testing.T) {
 	dispatcher := new(mocks.MockDispatcher)
 	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
-	msg := []queueConsumer.Message{
+	msg1 := []queueConsumer.Message{
 		{
 			Headers: map[string]string{
 				"X-Request-Id": "tid_fzy2uqund8_carousel_1485954245",
@@ -156,7 +156,33 @@ func TestDiscardStandardCarouselPublicationEvents(t *testing.T) {
 		},
 	}
 
-	handler.HandleMessage(msg)
+	msg2 := []queueConsumer.Message{
+		{
+			Headers: map[string]string{
+				"X-Request-Id": "republish_-10bd337c-66d4-48d9-ab8a-e8441fa2ec98_carousel_1493606135",
+			},
+			Body: `{
+	         "UUID": "a uuid",
+	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"
+	      }`,
+		},
+	}
+
+	msg3 := []queueConsumer.Message{
+		{
+			Headers: map[string]string{
+				"X-Request-Id": "tid_ofcysuifp0_carousel_1488384556_gentx",
+			},
+			Body: `{
+	         "UUID": "a uuid",
+	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"
+	      }`,
+		},
+	}
+	handler.HandleMessage(msg1)
+	handler.HandleMessage(msg2)
+	handler.HandleMessage(msg3)
+
 	dispatcher.AssertNotCalled(t, "Send")
 }
 

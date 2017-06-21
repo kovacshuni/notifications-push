@@ -2,22 +2,17 @@ package resources
 
 import (
 	"net/http"
-	"time"
 
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	"github.com/Financial-Times/message-queue-gonsumer/consumer"
 	"github.com/Financial-Times/service-status-go/gtg"
 )
 
-const requestTimeout = 4500
-
 type HealthCheck struct {
 	consumer consumer.MessageConsumer
 }
 
-func NewHealthCheck(consumerConf *consumer.QueueConfig) *HealthCheck {
-	httpClient := &http.Client{Timeout: requestTimeout * time.Millisecond}
-	c := consumer.NewConsumer(*consumerConf, func(m consumer.Message) {}, httpClient)
+func NewHealthCheck(c consumer.MessageConsumer) *HealthCheck {
 	return &HealthCheck{
 		consumer: c,
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/Financial-Times/message-queue-gonsumer/consumer"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 )
 
 func initializeHealthCheck(isConsumerConnectionHealthy bool) *HealthCheck {
@@ -16,8 +17,7 @@ func initializeHealthCheck(isConsumerConnectionHealthy bool) *HealthCheck {
 }
 
 func TestNewHealthCheck(t *testing.T) {
-	c := &consumer.QueueConfig{}
-	hc := NewHealthCheck(c)
+	hc := NewHealthCheck(consumer.NewConsumer(consumer.QueueConfig{}, func(m consumer.Message) {}, http.DefaultClient))
 
 	assert.NotNil(t, hc.consumer)
 }

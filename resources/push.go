@@ -11,13 +11,18 @@ import (
 )
 
 // Push handler for push subscribers
-func Push(reg dispatcher.Registrar) func(w http.ResponseWriter, r *http.Request) {
+func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClient *http.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Set("Connection", "keep-alive")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
+
+		apiKey := r.Header.Get("x-api-key")
+		if isValid := validateApiKey(apiKey, masheryApiKeyValidationURL, httpClient, w); !isValid {
+			return
+		}
 
 		cn, ok := w.(http.CloseNotifier)
 		if !ok {
@@ -72,4 +77,38 @@ func getClientAddr(r *http.Request) string {
 		return addr[0]
 	}
 	return r.RemoteAddr
+}
+
+func validateApiKey(providedApiKey string, masheryApiKeyValidationURL string, httpClient *http.Client, w http.ResponseWriter) bool {
+	req, err := http.NewRequest("GET", masheryApiKeyValidationURL, nil)
+	req.Header.Add("x-api-key", providedApiKey)
+	if err != nil {
+		log.WithError(err).Warn("Cannot create request")
+		http.Error(w, "Invalid api key", http.StatusInternalServerError)
+		return false
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		log.WithError(err).Warn("Cannot send request to mashery. Request url is %s", masheryApiKeyValidationURL)
+		http.Error(w, "Invalid api key", http.StatusInternalServerError)
+		return false
+	}
+
+	defer resp.Body.Close()
+
+	respStatusCode := resp.StatusCode
+	if respStatusCode == http.StatusOK {
+		return true
+	}
+
+	if respStatusCode == http.StatusUnauthorized {
+		log.WithError(err).Warn("Invalid api key")
+		http.Error(w, "Invalid api key", http.StatusUnauthorized)
+		return false
+	}
+
+	log.WithError(err).Warn("Received unexpected status code from Mashery: %d", respStatusCode)
+	http.Error(w, "", http.StatusServiceUnavailable)
+	return false
 }

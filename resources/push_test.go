@@ -38,7 +38,7 @@ func TestPushStandardSubscriber(t *testing.T) {
 		assert.Equal(t, "some-host", sub.Address())
 	}
 
-	Push(d)(w, req)
+	Push(d, "http://dummy.ft.com", &http.Client{})(w, req)
 
 	assert.Equal(t, "text/event-stream", w.Header().Get("Content-Type"), "Should be SSE")
 	assert.Equal(t, "no-cache, no-store, must-revalidate", w.Header().Get("Cache-Control"))
@@ -78,7 +78,7 @@ func TestPushMonitorSubscriber(t *testing.T) {
 		assert.Equal(t, "some-host", sub.Address())
 	}
 
-	Push(d)(w, req)
+	Push(d, "http://dummy.ft.com", &http.Client{})(w, req)
 
 	assert.Equal(t, "text/event-stream", w.Header().Get("Content-Type"), "Should be SSE")
 	assert.Equal(t, "no-cache, no-store, must-revalidate", w.Header().Get("Cache-Control"))
@@ -103,7 +103,7 @@ func TestPushFailed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	Push(d)(w, req)
+	Push(d, "http://dummy.ft.com", &http.Client{})(w, req)
 	assert.Equal(t, 500, w.Code)
 }
 

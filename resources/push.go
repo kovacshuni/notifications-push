@@ -10,6 +10,16 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+//ApiKey is provided either as a request param or as a header.
+func getApiKey(r *http.Request) string {
+	apiKey := r.Header.Get("x-api-key")
+	if apiKey != "" {
+		return apiKey
+	}
+
+	return r.URL.Query().Get("apiKey")
+}
+
 // Push handler for push subscribers
 func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClient *http.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -19,7 +29,7 @@ func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClien
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
 
-		apiKey := r.Header.Get("x-api-key")
+		apiKey := getApiKey(r)
 		if isValid := validateApiKey(apiKey, masheryApiKeyValidationURL, httpClient, w); !isValid {
 			return
 		}

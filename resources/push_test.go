@@ -11,6 +11,8 @@ import (
 	"github.com/Financial-Times/notifications-push/test/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"io/ioutil"
+	"strings"
 )
 
 var start func(sub dispatcher.Subscriber)
@@ -38,7 +40,8 @@ func TestPushStandardSubscriber(t *testing.T) {
 		assert.Equal(t, "some-host", sub.Address())
 	}
 
-	Push(d, "http://dummy.ft.com", &http.Client{})(w, req)
+	httpClient := initializeMockHTTPClient(200)
+	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 
 	assert.Equal(t, "text/event-stream", w.Header().Get("Content-Type"), "Should be SSE")
 	assert.Equal(t, "no-cache, no-store, must-revalidate", w.Header().Get("Cache-Control"))
@@ -78,7 +81,8 @@ func TestPushMonitorSubscriber(t *testing.T) {
 		assert.Equal(t, "some-host", sub.Address())
 	}
 
-	Push(d, "http://dummy.ft.com", &http.Client{})(w, req)
+	httpClient := initializeMockHTTPClient(200)
+	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 
 	assert.Equal(t, "text/event-stream", w.Header().Get("Content-Type"), "Should be SSE")
 	assert.Equal(t, "no-cache, no-store, must-revalidate", w.Header().Get("Cache-Control"))
@@ -103,8 +107,65 @@ func TestPushFailed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	Push(d, "http://dummy.ft.com", &http.Client{})(w, req)
+	httpClient := initializeMockHTTPClient(200)
+	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 	assert.Equal(t, 500, w.Code)
+}
+
+func TestMasheryDown(t *testing.T) {
+	d := new(MockDispatcher)
+
+	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+
+	w := NewStreamResponseRecorder()
+	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Set("X-Forwarded-For", "some-host, some-other-host-that-isnt-used")
+
+	start = func(sub dispatcher.Subscriber) {
+		sub.NotificationChannel() <- "hi"
+		time.Sleep(10 * time.Millisecond)
+		w.closer <- true
+
+		assert.True(t, time.Now().After(sub.Since()))
+		assert.Equal(t, "some-host", sub.Address())
+	}
+
+	httpClient := initializeMockHTTPClient(500)
+	Push(d, "http://dummy.ft.com", httpClient)(w, req)
+	assert.Equal(t, 503, w.Code)
+}
+
+func TestInvalidApiKey(t *testing.T) {
+	d := new(MockDispatcher)
+
+	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+
+	w := NewStreamResponseRecorder()
+	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Set("X-Forwarded-For", "some-host, some-other-host-that-isnt-used")
+
+	start = func(sub dispatcher.Subscriber) {
+		sub.NotificationChannel() <- "hi"
+		time.Sleep(10 * time.Millisecond)
+		w.closer <- true
+
+		assert.True(t, time.Now().After(sub.Since()))
+		assert.Equal(t, "some-host", sub.Address())
+	}
+
+	httpClient := initializeMockHTTPClient(401)
+	Push(d, "http://dummy.ft.com", httpClient)(w, req)
+	assert.Equal(t, 401, w.Code)
 }
 
 type MockDispatcher struct {
@@ -129,4 +190,32 @@ type StreamResponseRecorder struct {
 
 func (r *StreamResponseRecorder) CloseNotify() <-chan bool {
 	return r.closer
+}
+
+type MockWebClient struct{}
+type mockTransport struct {
+	responseStatusCode int
+	responseBody       string
+}
+
+func initializeMockHTTPClient(responseStatusCode int) *http.Client {
+	client := http.DefaultClient
+	client.Transport = &mockTransport{
+		responseStatusCode: responseStatusCode,
+	}
+
+	return client
+}
+
+func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	response := &http.Response{
+		Header:     make(http.Header),
+		Request:    req,
+		StatusCode: t.responseStatusCode,
+	}
+
+	response.Header.Set("Content-Type", "application/json")
+	response.Body = ioutil.NopCloser(strings.NewReader(t.responseBody))
+
+	return response, nil
 }

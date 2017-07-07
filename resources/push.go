@@ -28,11 +28,14 @@ func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClien
 		w.Header().Set("Connection", "keep-alive")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
-
+		log.Infof("Validating api key..")
 		apiKey := getApiKey(r)
 		if isValid := validateApiKey(apiKey, masheryApiKeyValidationURL, httpClient, w); !isValid {
+			log.Infof("Provided api key is invalid")
 			return
 		}
+
+		log.Infof("Provided api key is valid")
 
 		cn, ok := w.(http.CloseNotifier)
 		if !ok {

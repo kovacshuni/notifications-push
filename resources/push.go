@@ -94,12 +94,13 @@ func getClientAddr(r *http.Request) string {
 
 func validateApiKey(providedApiKey string, masheryApiKeyValidationURL string, httpClient *http.Client, w http.ResponseWriter) bool {
 	req, err := http.NewRequest("GET", masheryApiKeyValidationURL, nil)
-	req.Header.Set("x-api-key", providedApiKey)
 	if err != nil {
 		log.WithError(err).Warn("Cannot create request")
 		http.Error(w, "Invalid api key", http.StatusInternalServerError)
 		return false
 	}
+
+	req.Header.Set("x-api-key", providedApiKey)
 
 	resp, err := httpClient.Do(req)
 	if err != nil {

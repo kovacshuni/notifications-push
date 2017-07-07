@@ -78,7 +78,7 @@ func main() {
 	})
 	apiKeyValidationEndpoint := app.String(cli.StringOpt{
 		Name:   "api_key_validation_endpoint",
-		Value:  "/t800/a",
+		Value:  "t800/a",
 		Desc:   "The Mashery ApiKey validation endpoint",
 		EnvVar: "API_KEY_VALIDATION_ENDPOINT",
 	})
@@ -146,7 +146,7 @@ func main() {
 		queueHandler := consumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
 		httpClient := &http.Client{}
 		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, httpClient)
-		masheryApiKeyValidationUrl := fmt.Sprintf("%s/%s", apiBaseURL, apiKeyValidationEndpoint)
+		masheryApiKeyValidationUrl := fmt.Sprintf("%s/%s", *apiBaseURL, *apiKeyValidationEndpoint)
 		go server(":" + strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig, masheryApiKeyValidationUrl, httpClient)
 
 		pushService := newPushService(dispatcher, consumer)

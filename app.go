@@ -144,10 +144,10 @@ func main() {
 		}
 
 		queueHandler := consumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
-		hc := getResilientClient()
-		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, hc)
+		httpClient := getResilientClient()
+		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, httpClient)
 		masheryApiKeyValidationUrl := fmt.Sprintf("%s/%s", *apiBaseURL, *apiKeyValidationEndpoint)
-		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig, masheryApiKeyValidationUrl, hc)
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig, masheryApiKeyValidationUrl, httpClient)
 
 		pushService := newPushService(dispatcher, consumer)
 		pushService.start()

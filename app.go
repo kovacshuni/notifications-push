@@ -1,6 +1,8 @@
 package main
 
 import (
+	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -8,9 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	log "github.com/Sirupsen/logrus"
-	"github.com/gorilla/mux"
 
+	"fmt"
 	fthealth "github.com/Financial-Times/go-fthealth/v1a"
 	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
 	"github.com/Financial-Times/notifications-push/consumer"
@@ -18,7 +19,6 @@ import (
 	"github.com/Financial-Times/notifications-push/resources"
 	"github.com/Financial-Times/service-status-go/httphandlers"
 	"github.com/jawher/mow.cli"
-	"fmt"
 	"net"
 )
 
@@ -130,7 +130,7 @@ func main() {
 		}
 
 		history := dispatcher.NewHistory(*historySize)
-		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay) * time.Second, heartbeatPeriod, history)
+		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay)*time.Second, heartbeatPeriod, history)
 
 		mapper := consumer.NotificationMapper{
 			Resource:   *resource,
@@ -147,7 +147,7 @@ func main() {
 		hc := getResilientClient()
 		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, hc)
 		masheryApiKeyValidationUrl := fmt.Sprintf("%s/%s", *apiBaseURL, *apiKeyValidationEndpoint)
-		go server(":" + strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig, masheryApiKeyValidationUrl, hc)
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig, masheryApiKeyValidationUrl, hc)
 
 		pushService := newPushService(dispatcher, consumer)
 		pushService.start()

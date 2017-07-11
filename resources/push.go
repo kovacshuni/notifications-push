@@ -8,13 +8,13 @@ import (
 
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	log "github.com/Sirupsen/logrus"
-	"io/ioutil"
 	"io"
+	"io/ioutil"
 )
 
-const(
+const (
 	ApiKeyHeaderField = "X-Api-Key"
-	ApiKeyQueryParam = "apiKey"
+	ApiKeyQueryParam  = "apiKey"
 )
 
 //ApiKey is provided either as a request param or as a header.
@@ -129,12 +129,12 @@ func validApiKey(w http.ResponseWriter, providedApiKey string, masheryApiKeyVali
 	}
 
 	if respStatusCode == http.StatusUnauthorized {
-		log.WithField("apiKeyFirstChars", apiKeyFirstChars).WithError(err).Error("Invalid api key")
+		log.WithField("apiKeyFirstChars", apiKeyFirstChars).Error("Invalid api key")
 		http.Error(w, "Invalid api key", http.StatusUnauthorized)
 		return false
 	}
 
-	log.WithError(err).Errorf("Received unexpected status code from Mashery: %d", respStatusCode)
+	log.WithField("url", req.URL.String()).Errorf("Received unexpected status code from Mashery: %d", respStatusCode)
 	http.Error(w, "Request to validate api key returned an unexpected response", http.StatusServiceUnavailable)
 	return false
 }

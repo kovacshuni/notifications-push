@@ -8,16 +8,23 @@ import (
 
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	log "github.com/Sirupsen/logrus"
+	"io/ioutil"
+	"io"
+)
+
+const(
+	ApiKeyHeaderField = "X-Api-Key"
+	ApiKeyQueryParam = "apiKey"
 )
 
 //ApiKey is provided either as a request param or as a header.
 func getApiKey(r *http.Request) string {
-	apiKey := r.Header.Get("x-api-key")
+	apiKey := r.Header.Get(ApiKeyHeaderField)
 	if apiKey != "" {
 		return apiKey
 	}
 
-	return r.URL.Query().Get("apiKey")
+	return r.URL.Query().Get(ApiKeyQueryParam)
 }
 
 // Push handler for push subscribers
@@ -28,14 +35,11 @@ func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClien
 		w.Header().Set("Connection", "keep-alive")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
-		log.Infof("Validating api key..")
+
 		apiKey := getApiKey(r)
-		if isValid := validateApiKey(apiKey, masheryApiKeyValidationURL, httpClient, w); !isValid {
-			log.Infof("Provided api key is invalid")
+		if !validApiKey(w, apiKey, masheryApiKeyValidationURL, httpClient) {
 			return
 		}
-
-		log.Infof("Provided api key is valid")
 
 		cn, ok := w.(http.CloseNotifier)
 		if !ok {
@@ -92,24 +96,32 @@ func getClientAddr(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-func validateApiKey(providedApiKey string, masheryApiKeyValidationURL string, httpClient *http.Client, w http.ResponseWriter) bool {
+func validApiKey(w http.ResponseWriter, providedApiKey string, masheryApiKeyValidationURL string, httpClient *http.Client) bool {
 	req, err := http.NewRequest("GET", masheryApiKeyValidationURL, nil)
 	if err != nil {
-		log.WithError(err).Warn("Cannot create request")
-		http.Error(w, "Invalid api key", http.StatusInternalServerError)
+		log.WithField("url", masheryApiKeyValidationURL).WithError(err).Error("Invalid URL for api key validation")
+		http.Error(w, "Invalid URL", http.StatusInternalServerError)
 		return false
 	}
 
-	req.Header.Set("x-api-key", providedApiKey)
+	req.Header.Set(ApiKeyHeaderField, providedApiKey)
+
+	apiKeyFirstChars := ""
+	if isApiKeyFirstFourCharsLoggable(providedApiKey) {
+		apiKeyFirstChars = providedApiKey[0:3]
+	}
+	log.WithField("url", req.RequestURI).WithField("apiKeyFirstChars", apiKeyFirstChars).Info("Calling Mashery to validate api key")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		log.WithError(err).Warn("Cannot send request to mashery. Request url is %s", masheryApiKeyValidationURL)
-		http.Error(w, "Invalid api key", http.StatusInternalServerError)
+		log.WithField("url", req.RequestURI).WithError(err).Error("Cannot send request to Mashery")
+		http.Error(w, "Request to validate api key failed", http.StatusInternalServerError)
 		return false
 	}
-
-	defer resp.Body.Close()
+	defer func() {
+		io.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 
 	respStatusCode := resp.StatusCode
 	if respStatusCode == http.StatusOK {
@@ -117,12 +129,16 @@ func validateApiKey(providedApiKey string, masheryApiKeyValidationURL string, ht
 	}
 
 	if respStatusCode == http.StatusUnauthorized {
-		log.WithError(err).Warn("Invalid api key")
+		log.WithField("apiKeyFirstChars", apiKeyFirstChars).WithError(err).Error("Invalid api key")
 		http.Error(w, "Invalid api key", http.StatusUnauthorized)
 		return false
 	}
 
-	log.WithError(err).Warn("Received unexpected status code from Mashery: %d", respStatusCode)
-	http.Error(w, "", http.StatusServiceUnavailable)
+	log.WithError(err).Error("Received unexpected status code from Mashery: %d", respStatusCode)
+	http.Error(w, "Request to validate api key returned an unexpected response", http.StatusServiceUnavailable)
 	return false
+}
+
+func isApiKeyFirstFourCharsLoggable(providedApiKey string) bool {
+	return len(providedApiKey) > 4
 }

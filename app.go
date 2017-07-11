@@ -19,6 +19,7 @@ import (
 	"github.com/Financial-Times/service-status-go/httphandlers"
 	"github.com/jawher/mow.cli"
 	"fmt"
+	"net"
 )
 
 const heartbeatPeriod = 30 * time.Second
@@ -144,10 +145,10 @@ func main() {
 		}
 
 		queueHandler := consumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
-		httpClient := &http.Client{}
-		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, httpClient)
+		hc := getResilientClient()
+		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, hc)
 		masheryApiKeyValidationUrl := fmt.Sprintf("%s/%s", *apiBaseURL, *apiKeyValidationEndpoint)
-		go server(":" + strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig, masheryApiKeyValidationUrl, httpClient)
+		go server(":" + strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig, masheryApiKeyValidationUrl, hc)
 
 		pushService := newPushService(dispatcher, consumer)
 		pushService.start()
@@ -178,4 +179,19 @@ func server(listen string, resource string, dispatcher dispatcher.Dispatcher, hi
 
 	err := http.ListenAndServe(listen, nil)
 	log.Fatal(err)
+}
+
+func getResilientClient() *http.Client {
+	tr := &http.Transport{
+		MaxIdleConnsPerHost: 32,
+		Dial: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+	}
+	c := &http.Client{
+		Transport: tr,
+		Timeout:   time.Duration(10 * time.Second),
+	}
+	return c
 }

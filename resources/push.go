@@ -110,11 +110,11 @@ func validApiKey(w http.ResponseWriter, providedApiKey string, masheryApiKeyVali
 	if isApiKeyFirstFourCharsLoggable(providedApiKey) {
 		apiKeyFirstChars = providedApiKey[0:3]
 	}
-	log.WithField("url", req.RequestURI).WithField("apiKeyFirstChars", apiKeyFirstChars).Info("Calling Mashery to validate api key")
+	log.WithField("url", req.URL.String()).WithField("apiKeyFirstChars", apiKeyFirstChars).Info("Calling Mashery to validate api key")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		log.WithField("url", req.RequestURI).WithError(err).Error("Cannot send request to Mashery")
+		log.WithField("url", req.URL.String()).WithError(err).Error("Cannot send request to Mashery")
 		http.Error(w, "Request to validate api key failed", http.StatusInternalServerError)
 		return false
 	}
@@ -134,7 +134,7 @@ func validApiKey(w http.ResponseWriter, providedApiKey string, masheryApiKeyVali
 		return false
 	}
 
-	log.WithError(err).Error("Received unexpected status code from Mashery: %d", respStatusCode)
+	log.WithError(err).Errorf("Received unexpected status code from Mashery: %d", respStatusCode)
 	http.Error(w, "Request to validate api key returned an unexpected response", http.StatusServiceUnavailable)
 	return false
 }

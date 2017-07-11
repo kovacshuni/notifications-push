@@ -25,8 +25,7 @@ import (
 const heartbeatPeriod = 30 * time.Second
 
 func init() {
-	f := &log.TextFormatter{
-		FullTimestamp:   true,
+	f := &log.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
 	}
 

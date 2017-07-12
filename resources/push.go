@@ -13,18 +13,18 @@ import (
 )
 
 const (
-	ApiKeyHeaderField = "X-Api-Key"
-	ApiKeyQueryParam  = "apiKey"
+	apiKeyHeaderField = "X-Api-Key"
+	apiKeyQueryParam  = "apiKey"
 )
 
 //ApiKey is provided either as a request param or as a header.
 func getApiKey(r *http.Request) string {
-	apiKey := r.Header.Get(ApiKeyHeaderField)
+	apiKey := r.Header.Get(apiKeyHeaderField)
 	if apiKey != "" {
 		return apiKey
 	}
 
-	return r.URL.Query().Get(ApiKeyQueryParam)
+	return r.URL.Query().Get(apiKeyQueryParam)
 }
 
 // Push handler for push subscribers
@@ -97,6 +97,11 @@ func getClientAddr(r *http.Request) string {
 }
 
 func validApiKey(w http.ResponseWriter, providedApiKey string, masheryApiKeyValidationURL string, httpClient *http.Client) bool {
+	if providedApiKey == "" {
+		http.Error(w, "Empty api key", http.StatusUnauthorized)
+		return false
+	}
+
 	req, err := http.NewRequest("GET", masheryApiKeyValidationURL, nil)
 	if err != nil {
 		log.WithField("url", masheryApiKeyValidationURL).WithError(err).Error("Invalid URL for api key validation")
@@ -104,7 +109,7 @@ func validApiKey(w http.ResponseWriter, providedApiKey string, masheryApiKeyVali
 		return false
 	}
 
-	req.Header.Set(ApiKeyHeaderField, providedApiKey)
+	req.Header.Set(apiKeyHeaderField, providedApiKey)
 
 	apiKeyFirstChars := ""
 	if isApiKeyFirstFourCharsLoggable(providedApiKey) {

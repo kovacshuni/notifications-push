@@ -8,8 +8,6 @@ import (
 
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	log "github.com/Sirupsen/logrus"
-	"io"
-	"io/ioutil"
 )
 
 const (
@@ -37,7 +35,8 @@ func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClien
 		w.Header().Set("Expires", "0")
 
 		apiKey := getApiKey(r)
-		if !validApiKey(w, apiKey, masheryApiKeyValidationURL, httpClient) {
+		if isValid, errMsg, errStatusCode := isValidApiKey(apiKey, masheryApiKeyValidationURL, httpClient); !isValid {
+			http.Error(w, errMsg, errStatusCode)
 			return
 		}
 
@@ -94,56 +93,4 @@ func getClientAddr(r *http.Request) string {
 		return addr[0]
 	}
 	return r.RemoteAddr
-}
-
-func validApiKey(w http.ResponseWriter, providedApiKey string, masheryApiKeyValidationURL string, httpClient *http.Client) bool {
-	if providedApiKey == "" {
-		http.Error(w, "Empty api key", http.StatusUnauthorized)
-		return false
-	}
-
-	req, err := http.NewRequest("GET", masheryApiKeyValidationURL, nil)
-	if err != nil {
-		log.WithField("url", masheryApiKeyValidationURL).WithError(err).Error("Invalid URL for api key validation")
-		http.Error(w, "Invalid URL", http.StatusInternalServerError)
-		return false
-	}
-
-	req.Header.Set(apiKeyHeaderField, providedApiKey)
-
-	apiKeyFirstChars := ""
-	if isApiKeyFirstFourCharsLoggable(providedApiKey) {
-		apiKeyFirstChars = providedApiKey[0:3]
-	}
-	log.WithField("url", req.URL.String()).WithField("apiKeyFirstChars", apiKeyFirstChars).Info("Calling Mashery to validate api key")
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		log.WithField("url", req.URL.String()).WithError(err).Error("Cannot send request to Mashery")
-		http.Error(w, "Request to validate api key failed", http.StatusInternalServerError)
-		return false
-	}
-	defer func() {
-		io.Copy(ioutil.Discard, resp.Body)
-		resp.Body.Close()
-	}()
-
-	respStatusCode := resp.StatusCode
-	if respStatusCode == http.StatusOK {
-		return true
-	}
-
-	if respStatusCode == http.StatusUnauthorized {
-		log.WithField("apiKeyFirstChars", apiKeyFirstChars).Error("Invalid api key")
-		http.Error(w, "Invalid api key", http.StatusUnauthorized)
-		return false
-	}
-
-	log.WithField("url", req.URL.String()).Errorf("Received unexpected status code from Mashery: %d", respStatusCode)
-	http.Error(w, "Request to validate api key returned an unexpected response", http.StatusServiceUnavailable)
-	return false
-}
-
-func isApiKeyFirstFourCharsLoggable(providedApiKey string) bool {
-	return len(providedApiKey) > 4
 }

@@ -15,6 +15,10 @@ const (
 	apiKeyQueryParam  = "apiKey"
 )
 
+type pusher struct {
+	validator validator
+}
+
 //ApiKey is provided either as a request param or as a header.
 func getApiKey(r *http.Request) string {
 	apiKey := r.Header.Get(apiKeyHeaderField)
@@ -26,7 +30,7 @@ func getApiKey(r *http.Request) string {
 }
 
 // Push handler for push subscribers
-func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClient *http.Client) func(w http.ResponseWriter, r *http.Request) {
+func (p pusher) Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClient *http.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -35,7 +39,7 @@ func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClien
 		w.Header().Set("Expires", "0")
 
 		apiKey := getApiKey(r)
-		if isValid, errMsg, errStatusCode := isValidApiKey(apiKey, masheryApiKeyValidationURL, httpClient); !isValid {
+		if isValid, errMsg, errStatusCode := p.validator.isValidApiKey(apiKey, masheryApiKeyValidationURL, httpClient); !isValid {
 			http.Error(w, errMsg, errStatusCode)
 			return
 		}

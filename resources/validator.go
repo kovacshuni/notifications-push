@@ -7,7 +7,10 @@ import (
 	"net/http"
 )
 
-func isValidApiKey(providedApiKey string, masheryApiKeyValidationURL string, httpClient *http.Client) (bool, string, int) {
+type validator struct {
+}
+
+func (v validator) isValidApiKey(providedApiKey string, masheryApiKeyValidationURL string, httpClient *http.Client) (bool, string, int) {
 	if providedApiKey == "" {
 		return false, "Empty api key", http.StatusUnauthorized
 	}

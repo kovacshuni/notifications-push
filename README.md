@@ -47,14 +47,14 @@ export NOTIFICATIONS_RESOURCE=content \
 * or via command-line parameters:
 
 ```
-docker run --env NOTIFICATIONS_RESOURCE=content \
-        --env KAFKA_ADDRS=localhost:2181 \
-        --env GROUP_ID="notifications-push-yourtest" \
-        --env TOPIC="PostPublicationEvents" \
-        --env NOTIFICATIONS_DELAY=10 \
-        --env API_BASE_URL="http://api.ft.com" \
-        --env WHITELIST="^http://(methode|wordpress|content)-(article|collection)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$" \
-        coco/notifications-push
+./notifications-push \
+    --notifications_resourse="content" \
+    --consumer_addr="localhost:2181" \
+    --consumer_group_id="notifications-push" \
+    --topic="CmsPublicationEvents" \
+    --notifications_delay=10 \
+    --api-base-url="http://api.ft.com" \
+    --whitelist="^http://(methode|wordpress|content)-(article|collection)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$" \
 ```
 
 NB: for the complete list of options run `./notifications-push -h`
@@ -165,11 +165,13 @@ How to Build & Run with Docker
 ```
     docker build -t coco/notifications-push .
 
-    docker run --env QUEUE_PROXY_ADDRS="http://ftapp14714-lvpr-uk-t:8080,http://ftapp14721-lvpr-uk-t:8080" \
+    docker run --env NOTIFICATIONS_RESOURCE=content \
+        --env KAFKA_ADDRS=localhost:2181 \
         --env GROUP_ID="notifications-push-yourtest" \
-        --env AUTHORIZATION_KEY="can't tell, get it by etcdctl get /ft/_credentials/kafka-bridge/authorization_key" \
-        --env TOPIC="CmsPublicationEvents" \
+        --env TOPIC="PostPublicationEvents" \
+        --env NOTIFICATIONS_DELAY=10 \
         --env API_BASE_URL="http://api.ft.com" \
+        --env WHITELIST="^http://(methode|wordpress|content)-(article|collection)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$" \
         coco/notifications-push
 ```
 

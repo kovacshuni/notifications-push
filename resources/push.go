@@ -10,35 +10,14 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-const (
-	apiKeyHeaderField = "X-Api-Key"
-	apiKeyQueryParam  = "apiKey"
-)
-
-//ApiKey is provided either as a request param or as a header.
-func getApiKey(r *http.Request) string {
-	apiKey := r.Header.Get(apiKeyHeaderField)
-	if apiKey != "" {
-		return apiKey
-	}
-
-	return r.URL.Query().Get(apiKeyQueryParam)
-}
-
 // Push handler for push subscribers
-func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClient *http.Client) func(w http.ResponseWriter, r *http.Request) {
+func Push(reg dispatcher.Registrar) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Set("Connection", "keep-alive")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
-
-		apiKey := getApiKey(r)
-		if isValid, errMsg, errStatusCode := isValidApiKey(apiKey, masheryApiKeyValidationURL, httpClient); !isValid {
-			http.Error(w, errMsg, errStatusCode)
-			return
-		}
 
 		cn, ok := w.(http.CloseNotifier)
 		if !ok {

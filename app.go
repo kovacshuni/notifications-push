@@ -11,6 +11,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 
+	"fmt"
+	"net"
+
 	fthealth "github.com/Financial-Times/go-fthealth/v1a"
 	"github.com/Financial-Times/kafka-client-go/kafka"
 	queueConsumer "github.com/Financial-Times/notifications-push/consumer"
@@ -23,8 +26,7 @@ import (
 const heartbeatPeriod = 30 * time.Second
 
 func init() {
-	f := &log.TextFormatter{
-		FullTimestamp:   true,
+	f := &log.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
 	}
 
@@ -56,6 +58,12 @@ func main() {
 		Value:  "http://api.ft.com",
 		Desc:   "The API base URL where resources are accessible",
 		EnvVar: "API_BASE_URL",
+	})
+	apiKeyValidationEndpoint := app.String(cli.StringOpt{
+		Name:   "api_key_validation_endpoint",
+		Value:  "t800/a",
+		Desc:   "The Mashery ApiKey validation endpoint",
+		EnvVar: "API_KEY_VALIDATION_ENDPOINT",
 	})
 	topic := app.String(cli.StringOpt{
 		Name:   "topic",
@@ -113,7 +121,20 @@ func main() {
 			log.WithError(err).Fatal("Whitelist regex MUST compile!")
 		}
 
-		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumer)
+		tr := &http.Transport{
+			MaxIdleConnsPerHost: 32,
+			Dial: (&net.Dialer{
+				Timeout:   10 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+		}
+		httpClient := &http.Client{
+			Transport: tr,
+			Timeout:   time.Duration(10 * time.Second),
+		}
+
+		masheryAPIKeyValidationURL := fmt.Sprintf("%s/%s", *apiBaseURL, *apiKeyValidationEndpoint)
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumer, masheryAPIKeyValidationURL, httpClient)
 
 		queueHandler := queueConsumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
 		pushService := newPushService(dispatcher, consumer)
@@ -125,12 +146,12 @@ func main() {
 	}
 }
 
-func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumer kafka.Consumer) {
+func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumer kafka.Consumer, masheryAPIKeyValidationURL string, httpClient *http.Client) {
 	notificationsPushPath := "/" + resource + "/notifications-push"
 
 	r := mux.NewRouter()
 
-	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher)).Methods("GET")
+	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher, masheryAPIKeyValidationURL, httpClient)).Methods("GET")
 	r.HandleFunc("/__history", resources.History(history)).Methods("GET")
 	r.HandleFunc("/__stats", resources.Stats(dispatcher)).Methods("GET")
 

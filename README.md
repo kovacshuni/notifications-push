@@ -9,35 +9,52 @@ The microservice consumes a specific Apache Kafka topic group, then it pushes a 
 How to Build & Run the binary
 -----------------------------
 
-1. Build and test:
+1. Install, build and test:
 ```
-go build
-go test ./...
-```
-2. Run:
+go get -u github.com/kardianos/govendor
+go get -u github.com/Financial-Times/notifications-push
+cd $GOPATH/src/github.com/Financial-Times/notifications-push
 
-* via environment variables:
+govendor sync
+govendor test -v -race
+go install
+```
+2. Run locally:
+
+* Create tunnel to the Kafka service inside the cluster for ports 2181 and 9092 (use the public IP):
+```
+ssh -L 2181:localhost:2181 -L 9092:localhost:9092 username@<host>
+```
+
+* Add the private DNS of the Kafka machine to the hosts file:
+```
+127.0.0.1       <private_dns> 
+```
+
+* Start the service using environment variables:
 
 ```
-export QUEUE_PROXY_ADDRS="http://ftapp14714-lvpr-uk-t:8080,http://ftapp14721-lvpr-uk-t:8080" \
-    && export NOTIFICATIONS_RESOURCE="content" \
-    && export GROUP_ID="notifications-push-yourtest" \
-    && export AUTHORIZATION_KEY="$(ssh semantic-tunnel-up.ft.com etcdctl get /ft/_credentials/kafka-bridge/authorization_key)" \
-    && export TOPIC=CmsPublicationEvents \
+export NOTIFICATIONS_RESOURCE=content \
+    && export KAFKA_ADDRS=localhost:2181 \
+    && export GROUP_ID=notifications-push-yourtest \
+    && export TOPIC=PostPublicationEvents \
+    && export NOTIFICATIONS_DELAY=10 \
     && export API_BASE_URL="http://api.ft.com" \
+    && export WHITELIST="^http://(methode|wordpress|content)-(article|collection)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$" \
     && ./notifications-push
 ```
 
 * or via command-line parameters:
 
 ```
-./notifications-push \
-    --notifications_resourse="content"
-    --consumer_proxy_addr="https://kafka-proxy-iw-uk-p-1.glb.ft.com,https://kafka-proxy-iw-uk-p-2.glb.ft.com" \
-    --consumer_group_id="notifications-push" \
-    --consumer_authorization_key "$(ssh semantic-tunnel-up.ft.com etcdctl get /ft/_credentials/kafka-bridge/authorization_key)" \
-    --api-base-url="http://api.ft.com" \
-    --topic="CmsPublicationEvents"
+docker run --env NOTIFICATIONS_RESOURCE=content \
+        --env KAFKA_ADDRS=localhost:2181 \
+        --env GROUP_ID="notifications-push-yourtest" \
+        --env TOPIC="PostPublicationEvents" \
+        --env NOTIFICATIONS_DELAY=10 \
+        --env API_BASE_URL="http://api.ft.com" \
+        --env WHITELIST="^http://(methode|wordpress|content)-(article|collection)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$" \
+        coco/notifications-push
 ```
 
 NB: for the complete list of options run `./notifications-push -h`

@@ -1,6 +1,8 @@
 package main
 
 import (
+	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -9,9 +11,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/gorilla/mux"
-
+	"fmt"
 	fthealth "github.com/Financial-Times/go-fthealth/v1a"
 	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
 	"github.com/Financial-Times/notifications-push/consumer"
@@ -19,13 +19,13 @@ import (
 	"github.com/Financial-Times/notifications-push/resources"
 	"github.com/Financial-Times/service-status-go/httphandlers"
 	"github.com/jawher/mow.cli"
+	"net"
 )
 
 const heartbeatPeriod = 30 * time.Second
 
 func init() {
-	f := &log.TextFormatter{
-		FullTimestamp:   true,
+	f := &log.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
 	}
 
@@ -75,6 +75,12 @@ func main() {
 		Value:  "http://api.ft.com",
 		Desc:   "The API base URL where resources are accessible",
 		EnvVar: "API_BASE_URL",
+	})
+	apiKeyValidationEndpoint := app.String(cli.StringOpt{
+		Name:   "api_key_validation_endpoint",
+		Value:  "t800/a",
+		Desc:   "The Mashery ApiKey validation endpoint",
+		EnvVar: "API_KEY_VALIDATION_ENDPOINT",
 	})
 	topic := app.String(cli.StringOpt{
 		Name:   "topic",
@@ -138,9 +144,22 @@ func main() {
 		}
 
 		queueHandler := consumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
-		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, &http.Client{})
 
-		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig)
+		tr := &http.Transport{
+			MaxIdleConnsPerHost: 32,
+			Dial: (&net.Dialer{
+				Timeout:   10 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+		}
+		httpClient := &http.Client{
+			Transport: tr,
+			Timeout:   time.Duration(10 * time.Second),
+		}
+
+		consumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, httpClient)
+		masheryApiKeyValidationUrl := fmt.Sprintf("%s/%s", *apiBaseURL, *apiKeyValidationEndpoint)
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, consumerConfig, masheryApiKeyValidationUrl, httpClient)
 
 		pushService := newPushService(dispatcher, consumer)
 		pushService.start()
@@ -151,12 +170,12 @@ func main() {
 	}
 }
 
-func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumerConfig queueConsumer.QueueConfig) {
+func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumerConfig queueConsumer.QueueConfig, masheryApiKeyValidationUrl string, httpClient *http.Client) {
 	notificationsPushPath := "/" + resource + "/notifications-push"
 
 	r := mux.NewRouter()
 
-	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher)).Methods("GET")
+	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher, masheryApiKeyValidationUrl, httpClient)).Methods("GET")
 	r.HandleFunc("/__history", resources.History(history)).Methods("GET")
 	r.HandleFunc("/__stats", resources.Stats(dispatcher)).Methods("GET")
 

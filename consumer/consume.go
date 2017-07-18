@@ -29,7 +29,6 @@ func NewMessageQueueHandler(whitelist *regexp.Regexp, mapper NotificationMapper,
 }
 
 func (qHandler *simpleMessageQueueHandler) HandleMessage(queueMsg kafka.FTMessage) error {
-	var batch []dispatcher.Notification
 	msg := NotificationQueueMessage{queueMsg}
 
 	pubEvent, err := msg.ToPublicationEvent()
@@ -59,11 +58,8 @@ func (qHandler *simpleMessageQueueHandler) HandleMessage(queueMsg kafka.FTMessag
 		return err
 	}
 
-	batch = append(batch, notification)
-	log.WithField("resource", notification.APIURL).WithField("transaction_id", notification.PublishReference).Info("Valid notification in message batch")
+	log.WithField("resource", notification.APIURL).WithField("transaction_id", notification.PublishReference).Info("Valid notification received")
+	qHandler.dispatcher.Send(notification)
 
-	if len(batch) > 0 {
-		qHandler.dispatcher.Send(batch...)
-	}
 	return nil
 }

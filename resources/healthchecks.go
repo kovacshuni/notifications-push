@@ -34,10 +34,10 @@ func (hc *NotificationsPushHealthcheck) GTG(w http.ResponseWriter, req *http.Req
 func (hc *NotificationsPushHealthcheck) Check() fthealth.Check {
 	return fthealth.Check{
 		BusinessImpact:   "Notifications about newly modified/published content will not reach this app, nor will they reach its clients.",
-		Name:             "MessageQueueProxyReachable",
+		Name:             "MessageQueueReachable",
 		PanicGuide:       "https://sites.google.com/a/ft.com/universal-publishing/ops-guides/notifications-push",
 		Severity:         1,
-		TechnicalSummary: "Message queue proxy is not reachable/healthy",
+		TechnicalSummary: "Message queue is not reachable/healthy",
 		Checker:          hc.checkAggregateMessageQueueReachable,
 	}
 }

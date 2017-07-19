@@ -44,7 +44,7 @@ func main() {
 	consumerAddrs := app.String(cli.StringOpt{
 		Name:   "consumer_addr",
 		Value:  "",
-		Desc:   "Comma separated kafka proxy hosts for message consuming.",
+		Desc:   "Comma separated kafka hosts for message consuming.",
 		EnvVar: "KAFKA_ADDRS",
 	})
 	consumerGroupID := app.String(cli.StringOpt{

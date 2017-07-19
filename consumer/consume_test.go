@@ -4,9 +4,9 @@ import (
 	"regexp"
 	"testing"
 
-	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
 	"github.com/Financial-Times/notifications-push/test/mocks"
 
+	"github.com/Financial-Times/kafka-client-go/kafka"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -21,17 +21,8 @@ func TestSyntheticMessage(t *testing.T) {
 	dispatcher := new(mocks.MockDispatcher)
 	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
-	msg := []queueConsumer.Message{
-		{
-			Headers: map[string]string{
-				"X-Request-Id": "SYNTH_tid",
-			},
-			Body: `{
-	         "UUID": "a uuid",
-	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"
-	      }`,
-		},
-	}
+	msg := kafka.NewFTMessage(map[string]string{"X-Request-Id": "SYNTH_tid"},
+		`{"UUID": "a uuid", "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"}`)
 
 	handler.HandleMessage(msg)
 	dispatcher.AssertNotCalled(t, "Send")
@@ -46,14 +37,7 @@ func TestFailedCMSMessageParse(t *testing.T) {
 	dispatcher := new(mocks.MockDispatcher)
 	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
-	msg := []queueConsumer.Message{
-		{
-			Headers: map[string]string{
-				"X-Request-Id": "tid_summin",
-			},
-			Body: "",
-		},
-	}
+	msg := kafka.NewFTMessage(map[string]string{"X-Request-Id": "tid_summin"}, "")
 
 	handler.HandleMessage(msg)
 	dispatcher.AssertNotCalled(t, "Send")
@@ -68,16 +52,8 @@ func TestWhitelist(t *testing.T) {
 	dispatcher := new(mocks.MockDispatcher)
 	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
-	msg := []queueConsumer.Message{
-		{
-			Headers: map[string]string{
-				"X-Request-Id": "tid_summin",
-			},
-			Body: `{
-	         "ContentURI": "something which wouldn't match"
-	      }`,
-		},
-	}
+	msg := kafka.NewFTMessage(map[string]string{"X-Request-Id": "tid_summin"},
+		`{"ContentURI": "something which wouldn't match"}`)
 
 	handler.HandleMessage(msg)
 	dispatcher.AssertNotCalled(t, "Send")
@@ -93,16 +69,8 @@ func TestFailsConversionToNotification(t *testing.T) {
 
 	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
-	msg := []queueConsumer.Message{
-		{
-			Headers: map[string]string{
-				"X-Request-Id": "tid_summin",
-			},
-			Body: `{
-	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a" +
-	      }`,
-		},
-	}
+	msg := kafka.NewFTMessage(map[string]string{"X-Request-Id": "tid_summin"},
+		`{"ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a" + }`)
 
 	handler.HandleMessage(msg)
 	dispatcher.AssertNotCalled(t, "Send")
@@ -119,17 +87,8 @@ func TestHandleMessage(t *testing.T) {
 
 	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
-	msg := []queueConsumer.Message{
-		{
-			Headers: map[string]string{
-				"X-Request-Id": "tid_summin",
-			},
-			Body: `{
-	         "UUID": "a uuid",
-	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"
-	      }`,
-		},
-	}
+	msg := kafka.NewFTMessage(map[string]string{"X-Request-Id": "tid_summin"},
+		`{"UUID": "a uuid", "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"}`)
 
 	handler.HandleMessage(msg)
 	dispatcher.AssertExpectations(t)
@@ -144,41 +103,15 @@ func TestDiscardStandardCarouselPublicationEvents(t *testing.T) {
 	dispatcher := new(mocks.MockDispatcher)
 	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
-	msg1 := []queueConsumer.Message{
-		{
-			Headers: map[string]string{
-				"X-Request-Id": "tid_fzy2uqund8_carousel_1485954245",
-			},
-			Body: `{
-	         "UUID": "a uuid",
-	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"
-	      }`,
-		},
-	}
+	msg1 := kafka.NewFTMessage(map[string]string{"X-Request-Id": "tid_fzy2uqund8_carousel_1485954245"},
+		`{"UUID": "a uuid", "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"}`)
 
-	msg2 := []queueConsumer.Message{
-		{
-			Headers: map[string]string{
-				"X-Request-Id": "republish_-10bd337c-66d4-48d9-ab8a-e8441fa2ec98_carousel_1493606135",
-			},
-			Body: `{
-	         "UUID": "a uuid",
-	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"
-	      }`,
-		},
-	}
+	msg2 := kafka.NewFTMessage(map[string]string{"X-Request-Id": "republish_-10bd337c-66d4-48d9-ab8a-e8441fa2ec98_carousel_1493606135"},
+		`{"UUID": "a uuid", "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"}`)
 
-	msg3 := []queueConsumer.Message{
-		{
-			Headers: map[string]string{
-				"X-Request-Id": "tid_ofcysuifp0_carousel_1488384556_gentx",
-			},
-			Body: `{
-	         "UUID": "a uuid",
-	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"
-	      }`,
-		},
-	}
+	msg3 := kafka.NewFTMessage(map[string]string{"X-Request-Id": "tid_ofcysuifp0_carousel_1488384556_gentx"},
+		`{"UUID": "a uuid", "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"}`,
+	)
 	handler.HandleMessage(msg1)
 	handler.HandleMessage(msg2)
 	handler.HandleMessage(msg3)
@@ -195,17 +128,9 @@ func TestDiscardCarouselPublicationEventsWithGeneratedTransactionID(t *testing.T
 	dispatcher := new(mocks.MockDispatcher)
 	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 
-	msg := []queueConsumer.Message{
-		{
-			Headers: map[string]string{
-				"X-Request-Id": "tid_fzy2uqund8_carousel_1485954245_gentx",
-			},
-			Body: `{
-	         "UUID": "a uuid",
-	         "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"
-	      }`,
-		},
-	}
+	msg := kafka.NewFTMessage(map[string]string{"X-Request-Id": "tid_fzy2uqund8_carousel_1485954245_gentx"},
+		`{"UUID": "a uuid", "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/55e40823-6804-4264-ac2f-b29e11bf756a"}`,
+	)
 
 	handler.HandleMessage(msg)
 	dispatcher.AssertNotCalled(t, "Send")

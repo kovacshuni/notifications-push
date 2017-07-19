@@ -6,24 +6,25 @@ import (
 	"sync"
 	"syscall"
 
-	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
+	"github.com/Financial-Times/kafka-client-go/kafka"
+	cons "github.com/Financial-Times/notifications-push/consumer"
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	log "github.com/Sirupsen/logrus"
 )
 
 type pushService struct {
 	dispatcher dispatcher.Dispatcher
-	consumer   queueConsumer.MessageConsumer
+	consumer   kafka.Consumer
 }
 
-func newPushService(d dispatcher.Dispatcher, consumer queueConsumer.MessageConsumer) *pushService {
+func newPushService(d dispatcher.Dispatcher, consumer kafka.Consumer) *pushService {
 	return &pushService{
 		dispatcher: d,
 		consumer:   consumer,
 	}
 }
 
-func (p *pushService) start() {
+func (p *pushService) start(queueHandler cons.MessageQueueHandler) {
 	go p.dispatcher.Start()
 
 	var wg sync.WaitGroup
@@ -31,7 +32,7 @@ func (p *pushService) start() {
 
 	go func() {
 		log.Println("Started consuming.")
-		p.consumer.Start()
+		p.consumer.StartListening(queueHandler.HandleMessage)
 		log.Println("Finished consuming.")
 		wg.Done()
 	}()
@@ -40,7 +41,7 @@ func (p *pushService) start() {
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch
 	log.Info("Termination signal received. Quitting message consumer and notification dispatcher function.")
-	p.consumer.Stop()
+	p.consumer.Shutdown()
 	p.dispatcher.Stop()
 	wg.Wait()
 }

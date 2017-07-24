@@ -1,48 +1,56 @@
 package resources
 
 import (
-	"errors"
 	"net/http"
 
-	fthealth "github.com/Financial-Times/go-fthealth/v1a"
+	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	"github.com/Financial-Times/kafka-client-go/kafka"
+	"github.com/Financial-Times/service-status-go/gtg"
+	"errors"
 )
 
-//NotificationsPushHealthcheck is the main health check for the notifications-push service
-type NotificationsPushHealthcheck struct {
-	Client   *http.Client
+type HealthCheck struct {
 	Consumer kafka.Consumer
 }
 
-// NewNotificationsPushHealthcheck returns a new instance of NotificationsPushHealthcheck.
-func NewNotificationsPushHealthcheck(kafkaConsumer kafka.Consumer) *NotificationsPushHealthcheck {
-	return &NotificationsPushHealthcheck{
-		Client:   &http.Client{},
-		Consumer: kafkaConsumer,
+func NewHealthCheck(kafkaConsumer kafka.Consumer) *HealthCheck {
+	return &HealthCheck{
+Consumer: kafkaConsumer,
 	}
 }
 
-// GTG is the HTTP handler function for the good-to-go endpoint of notifications-push
-func (hc *NotificationsPushHealthcheck) GTG(w http.ResponseWriter, req *http.Request) {
-	if _, err := hc.checkAggregateMessageQueueReachable(); err != nil {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte("Kafka healthcheck failed"))
+func (h *HealthCheck) Health() func(w http.ResponseWriter, r *http.Request) {
+	checks := []fthealth.Check{h.queueCheck()}
+	hc := fthealth.HealthCheck{
+		SystemCode:  "upp-notifications-push",
+		Name:        "Notifications Push",
+		Description: "Checks if all the dependent services are reachable and healthy.",
+		Checks:      checks,
 	}
+	return fthealth.Handler(hc)
 }
 
 // Check is the the NotificationsPushHealthcheck method that checks if the kafka queue is available
-func (hc *NotificationsPushHealthcheck) Check() fthealth.Check {
+func (h *HealthCheck) queueCheck() fthealth.Check {
 	return fthealth.Check{
-		BusinessImpact:   "Notifications about newly modified/published content will not reach this app, nor will they reach its clients.",
+		ID:               "message-queue-reachable",
 		Name:             "MessageQueueReachable",
-		PanicGuide:       "https://sites.google.com/a/ft.com/universal-publishing/ops-guides/notifications-push",
 		Severity:         1,
+		BusinessImpact:   "Notifications about newly modified/published content will not reach this app, nor will they reach its clients.",
 		TechnicalSummary: "Message queue is not reachable/healthy",
-		Checker:          hc.checkAggregateMessageQueueReachable,
+		PanicGuide:       "https://dewey.ft.com/upp-notifications-push.html",
+		Checker:          h.checkAggregateMessageQueueReachable,
 	}
 }
 
-func (hc *NotificationsPushHealthcheck) checkAggregateMessageQueueReachable() (string, error) {
+func (h *HealthCheck) GTG() gtg.Status {
+	if _,err := h.checkAggregateMessageQueueReachable(); err != nil {
+		return gtg.Status{GoodToGo: false, Message: err.Error()}
+	}
+	return gtg.Status{GoodToGo: true}
+}
+
+func (hc *HealthCheck) checkAggregateMessageQueueReachable() (string, error) {
 	// ISSUE: consumer's helthcheck always returns true
 	err := hc.Consumer.ConnectivityCheck()
 	if err == nil {

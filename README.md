@@ -1,7 +1,7 @@
 notifications-push
 ==================
 
-[![CircleCI](https://circleci.com/gh/Financial-Times/notifications-push.svg?style=svg)](https://circleci.com/gh/Financial-Times/notifications-push) [![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/notifications-push)](https://goreportcard.com/report/github.com/Financial-Times/notifications-push) [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/notifications-push/badge.svg?branch=master)](https://coveralls.io/github/Financial-Times/notifications-push?branch=master) [![codecov](https://codecov.io/gh/Financial-Times/notifications-push/branch/master/graph/badge.svg)](https://codecov.io/gh/Financial-Times/notifications-push)
+[![CircleCI](https://circleci.com/gh/Financial-Times/notifications-push.svg?style=svg)](https://circleci.com/gh/Financial-Times/notifications-push) [![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/notifications-push)](https://goreportcard.com/report/github.com/Financial-Times/notifications-push) [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/notifications-push/badge.svg)](https://coveralls.io/github/Financial-Times/notifications-push)
 
 Notifications-push is a microservice that provides push notifications of publications or changes of articles and lists of content.
 The microservice consumes a specific Apache Kafka topic group, then it pushes a notification for each article or list available in the consumed Kafka messages.

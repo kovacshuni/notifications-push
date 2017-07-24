@@ -48,19 +48,21 @@ export NOTIFICATIONS_RESOURCE=content \
 
 ```
 ./notifications-push \
-    --notifications_resourse="content" \
+    --notifications_resource="content" \
     --consumer_addr="localhost:2181" \
     --consumer_group_id="notifications-push" \
-    --topic="CmsPublicationEvents" \
+    --topic="PostPublicationEvents" \
     --notifications_delay=10 \
     --api-base-url="http://api.ft.com" \
-    --whitelist="^http://(methode|wordpress|content)-(article|collection)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$" \
+    --api_key_validation_endpoint="t800/a" \
+    --whitelist="^http://(methode|wordpress|content)-(article|collection)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$"
 ```
 
 NB: for the complete list of options run `./notifications-push -h`
 
 HTTP endpoints
 ----------
+```curl -i --header "x-api-key: «api_key»" https://api.ft.com/content/notifications-push```
 
 ### Push stream
 
@@ -106,6 +108,8 @@ curl -X GET "https://<user>@<password>:pre-prod-up.ft.com/lists/notifications-pu
 **WARNING: In CoCo, this endpoint does not work under `/__notifications-push/` and `/__list-notifications-push/`.**
 The reason for this is because Vulcan does not support long polling of HTTP requests. We worked around this issue by forwarding messages through Varnish to a fixed port for both services.
 
+**Productionizing Push API:**
+Mashery does not support long polling of HTTP requests, so the requests come through Fastly. Everytime a client tries to connect to Notifications Push, the service performs a call to Mashery in order to validate the API key from the client.
 
 ### Notification history
 A HTTP GET to the `/__history` endpoint will return the history of the last notifications consumed from the Kakfa queue.
@@ -182,5 +186,10 @@ Example client code is provided in `bin/client` directory
 
 Useful Links
 ------------
-* Production: https://prod-coco-up-read.ft.com/content/notifications-push (needs credentials)
-* Production: https://prod-coco-up-read.ft.com/lists/notifications-push (needs credentials)
+* Production: 
+
+[https://prod-coco-up-read.ft.com/content/notifications-push](#https://prod-coco-up-read.ft.com/content/notifications-push) &&
+
+[https://prod-coco-up-read.ft.com/lists/notifications-push](#https://prod-coco-up-read.ft.com/lists/notifications-push) (needs credentials)
+* Production: 
+https://api.ft.com/content/notifications-push?apiKey=555

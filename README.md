@@ -188,8 +188,13 @@ Useful Links
 ------------
 * Production: 
 
-[https://prod-coco-up-read.ft.com/content/notifications-push](#https://prod-coco-up-read.ft.com/content/notifications-push) &&
+[https://api.ft.com/content/notifications-push](#https://api.ft.com/content/notifications-push?apiKey=555) (needs API key)
+
+[https://api.ft.com/lists/notifications-push](#https://api.ft.com/content/notifications-push?apiKey=555) (needs API key)
+
+* For internal use:
+
+[https://prod-coco-up-read.ft.com/content/notifications-push](#https://prod-coco-up-read.ft.com/content/notifications-push) (needs credentials) 
 
 [https://prod-coco-up-read.ft.com/lists/notifications-push](#https://prod-coco-up-read.ft.com/lists/notifications-push) (needs credentials)
-* Production: 
-https://api.ft.com/content/notifications-push?apiKey=555
+

@@ -24,7 +24,7 @@ func (n NotificationMapper) MapNotification(event PublicationEvent, transactionI
 	}
 
 	var eventType string
-	var scoop *bool
+	var scoop bool
 	var title = ""
 
 	if event.HasEmptyPayload() {
@@ -45,10 +45,11 @@ func (n NotificationMapper) MapNotification(event PublicationEvent, transactionI
 	}, nil
 }
 
-func extractDataFromPayload(event PublicationEvent) (string, *bool) {
+func extractDataFromPayload(event PublicationEvent) (string, bool) {
+	scoop := false
 	notificationPayloadMap, ok := event.Payload.(map[string]interface{})
 	if !ok {
-		return "", nil
+		return "", scoop
 	}
 
 	var title = ""
@@ -56,13 +57,11 @@ func extractDataFromPayload(event PublicationEvent) (string, *bool) {
 		title = notificationPayloadMap["title"].(string)
 	}
 
-	var scoop *bool
 	var standout = notificationPayloadMap["standout"]
 	if standout != nil {
 		standoutMap, ok := standout.(map[string]interface{})
 		if ok && standoutMap["scoop"] != nil {
-			s := standoutMap["scoop"].(bool)
-			scoop = &s
+			scoop = standoutMap["scoop"].(bool)
 		}
 	}
 

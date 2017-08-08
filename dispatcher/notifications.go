@@ -9,7 +9,7 @@ type Notification struct {
 	LastModified     string `json:"lastModified,omitempty"`
 	NotificationDate string `json:"notificationDate,omitempty"`
 	Title            string `json:"title,omitempty"`
-	Scoop            *bool  `json:"scoop,omitempty"`
+	Scoop            bool   `json:"scoop"`
 }
 
 const changeType = "http://www.ft.com/thing/ThingChangeType"

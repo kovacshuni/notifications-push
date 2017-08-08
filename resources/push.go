@@ -28,7 +28,7 @@ func getApiKey(r *http.Request) string {
 // Push handler for push subscribers
 func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClient *http.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-type", "text/event-stream")
+		w.Header().Set("Content-type", "text/event-stream; charset=UTF-8")
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Set("Connection", "keep-alive")
 		w.Header().Set("Pragma", "no-cache")

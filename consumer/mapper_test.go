@@ -49,7 +49,6 @@ func TestMapToUpdateNotification_ForContentWithVersion3UUID(t *testing.T) {
 
 	assert.Equal(t, "http://www.ft.com/thing/ThingChangeType/UPDATE", n.Type, "It is an UPDATE notification")
 	assert.Nil(t, err, "The mapping should not return an error")
-	assert.Nil(t, err, "The mapping should not return an error")
 	assert.Equal(t, "", n.Title, "Empty title should pe mapped correctly")
 }
 

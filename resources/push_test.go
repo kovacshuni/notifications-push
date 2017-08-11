@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"errors"
+	"io/ioutil"
+	"strings"
+
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	"github.com/Financial-Times/notifications-push/test/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"io/ioutil"
-	"strings"
 )
 
 var start func(sub dispatcher.Subscriber)
@@ -47,7 +48,7 @@ func TestPushStandardSubscriber(t *testing.T) {
 	})
 	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 
-	assert.Equal(t, "text/event-stream", w.Header().Get("Content-Type"), "Should be SSE")
+	assert.Equal(t, "text/event-stream; charset=UTF-8", w.Header().Get("Content-Type"), "Should be SSE")
 	assert.Equal(t, "no-cache, no-store, must-revalidate", w.Header().Get("Cache-Control"))
 	assert.Equal(t, "keep-alive", w.Header().Get("Connection"))
 	assert.Equal(t, "no-cache", w.Header().Get("Pragma"))
@@ -91,7 +92,7 @@ func TestPushMonitorSubscriber(t *testing.T) {
 	})
 	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 
-	assert.Equal(t, "text/event-stream", w.Header().Get("Content-Type"), "Should be SSE")
+	assert.Equal(t, "text/event-stream; charset=UTF-8", w.Header().Get("Content-Type"), "Should be SSE")
 	assert.Equal(t, "no-cache, no-store, must-revalidate", w.Header().Get("Cache-Control"))
 	assert.Equal(t, "keep-alive", w.Header().Get("Connection"))
 	assert.Equal(t, "no-cache", w.Header().Get("Pragma"))

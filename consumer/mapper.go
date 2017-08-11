@@ -24,10 +24,14 @@ func (n NotificationMapper) MapNotification(event PublicationEvent, transactionI
 	}
 
 	var eventType string
+	var scoop bool
+	var title = ""
+
 	if event.HasEmptyPayload() {
 		eventType = "DELETE"
 	} else {
 		eventType = "UPDATE"
+		title, scoop = extractDataFromPayload(event)
 	}
 
 	return dispatcher.Notification{
@@ -36,5 +40,30 @@ func (n NotificationMapper) MapNotification(event PublicationEvent, transactionI
 		APIURL:           n.APIBaseURL + "/" + n.Resource + "/" + UUID,
 		PublishReference: transactionID,
 		LastModified:     event.LastModified,
+		Title:            title,
+		Scoop:            scoop,
 	}, nil
+}
+
+func extractDataFromPayload(event PublicationEvent) (string, bool) {
+	scoop := false
+	notificationPayloadMap, ok := event.Payload.(map[string]interface{})
+	if !ok {
+		return "", scoop
+	}
+
+	var title = ""
+	if notificationPayloadMap["title"] != nil {
+		title = notificationPayloadMap["title"].(string)
+	}
+
+	var standout = notificationPayloadMap["standout"]
+	if standout != nil {
+		standoutMap, ok := standout.(map[string]interface{})
+		if ok && standoutMap["scoop"] != nil {
+			scoop = standoutMap["scoop"].(bool)
+		}
+	}
+
+	return title, scoop
 }

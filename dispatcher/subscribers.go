@@ -1,6 +1,7 @@
 package dispatcher
 
 import (
+	"bytes"
 	"encoding/json"
 	"reflect"
 	"time"
@@ -76,13 +77,27 @@ func buildStandardNotificationMsg(n Notification) (string, error) {
 }
 
 func buildNotificationMsg(n Notification) (string, error) {
-	jsonNotification, err := json.Marshal([]Notification{n})
-
+	jsonNotification, err := MarshalNotificationsJSON([]Notification{n})
 	if err != nil {
 		return "", err
 	}
 
 	return string(jsonNotification), err
+}
+
+// MarshalNotificationsJSON returns the JSON encoding of n. For notifications, we do not use the standard function json.Marshal()
+// because that will always escape special characters (<,>,&) in unicode format ("\u0026P" and similar)
+func MarshalNotificationsJSON(n []Notification) ([]byte, error) {
+	buffer := &bytes.Buffer{}
+	encoder := json.NewEncoder(buffer)
+	encoder.SetEscapeHTML(false)
+
+	err := encoder.Encode(n)
+	if err != nil {
+		return nil, err
+	}
+
+	return buffer.Bytes(), err
 }
 
 // monitorSubscriber implements a Monitor subscriber

@@ -20,6 +20,6 @@ func TestHistory(t *testing.T) {
 	w := httptest.NewRecorder()
 	History(history)(w, req)
 
-	assert.Equal(t, "application/json", w.Header().Get("Content-Type"), "Should be json")
+	assert.Equal(t, "application/json; charset=UTF-8", w.Header().Get("Content-Type"), "Should be json")
 	assert.Equal(t, 200, w.Code, "Should be OK")
 }

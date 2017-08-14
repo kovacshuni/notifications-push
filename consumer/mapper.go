@@ -41,7 +41,7 @@ func (n NotificationMapper) MapNotification(event PublicationEvent, transactionI
 		PublishReference: transactionID,
 		LastModified:     event.LastModified,
 		Title:            title,
-		Standout:            dispatcher.Standout{scoop},
+		Standout:         dispatcher.Standout{scoop},
 	}, nil
 }
 

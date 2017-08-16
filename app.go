@@ -1,6 +1,12 @@
 package main
 
 import (
+	"github.com/Financial-Times/kafka-client-go/kafka"
+	queueConsumer "github.com/Financial-Times/notifications-push/consumer"
+	"github.com/Financial-Times/service-status-go/httphandlers"
+	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
+	"github.com/jawher/mow.cli"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -8,16 +14,10 @@ import (
 	"regexp"
 	"strconv"
 	"time"
-	"github.com/Financial-Times/kafka-client-go/kafka"
-	queueConsumer "github.com/Financial-Times/notifications-push/consumer"
-	"github.com/Financial-Times/service-status-go/httphandlers"
-	log "github.com/Sirupsen/logrus"
-	"github.com/gorilla/mux"
-	"github.com/jawher/mow.cli"
 
+	"fmt"
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	"github.com/Financial-Times/notifications-push/resources"
-	"fmt"
 )
 
 const heartbeatPeriod = 30 * time.Second
@@ -119,7 +119,7 @@ func main() {
 		}
 
 		history := dispatcher.NewHistory(*historySize)
-		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay) * time.Second, heartbeatPeriod, history)
+		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay)*time.Second, heartbeatPeriod, history)
 
 		mapper := queueConsumer.NotificationMapper{
 			Resource:   *resource,
@@ -132,7 +132,7 @@ func main() {
 		}
 
 		masheryAPIKeyValidationURL := fmt.Sprintf("%s/%s", *apiBaseURL, *apiKeyValidationEndpoint)
-		go server(":" + strconv.Itoa(*port), *resource, dispatcher, history, messageConsumer, masheryAPIKeyValidationURL, httpClient)
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, messageConsumer, masheryAPIKeyValidationURL, httpClient)
 
 		queueHandler := queueConsumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
 		pushService := newPushService(dispatcher, messageConsumer)

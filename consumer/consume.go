@@ -57,9 +57,11 @@ func (qHandler *simpleMessageQueueHandler) HandleMessage(queueMsg kafka.FTMessag
 		log.WithField("transaction_id", msg.TransactionID()).WithField("msg", string(msg.Body)).WithError(err).Warn("Skipping event: Cannot build notification for message.")
 		return err
 	}
-
 	log.WithField("resource", notification.APIURL).WithField("transaction_id", notification.PublishReference).Info("Valid notification received")
-	qHandler.dispatcher.Send(notification)
+
+	notificationContentType := qHandler.mapper.GetNotificationContentType(pubEvent)
+	inbound := dispatcher.NewNotificationInbound(notification, notificationContentType)
+	qHandler.dispatcher.Send(inbound)
 
 	return nil
 }

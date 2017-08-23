@@ -11,9 +11,12 @@ import (
 )
 
 const (
-	apiKeyHeaderField = "X-Api-Key"
-	apiKeyQueryParam  = "apiKey"
+	apiKeyHeaderField  = "X-Api-Key"
+	apiKeyQueryParam   = "apiKey"
+	defaultContentType = "Article"
 )
+
+var supportedContentTypes = []string{"Article", "Content", "ContentPackage", "All"}
 
 //ApiKey is provided either as a request param or as a header.
 func getApiKey(r *http.Request) string {
@@ -48,15 +51,16 @@ func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClien
 
 		bw := bufio.NewWriter(w)
 
+		contentTypeParam := resolveContentType(r)
 		monitorParam := r.URL.Query().Get("monitor")
 		isMonitor, _ := strconv.ParseBool(monitorParam)
 
 		var s dispatcher.Subscriber
 
 		if isMonitor {
-			s = dispatcher.NewMonitorSubscriber(getClientAddr(r))
+			s = dispatcher.NewMonitorSubscriber(getClientAddr(r), contentTypeParam)
 		} else {
-			s = dispatcher.NewStandardSubscriber(getClientAddr(r))
+			s = dispatcher.NewStandardSubscriber(getClientAddr(r), contentTypeParam)
 		}
 
 		reg.Register(s)
@@ -93,4 +97,14 @@ func getClientAddr(r *http.Request) string {
 		return addr[0]
 	}
 	return r.RemoteAddr
+}
+
+func resolveContentType(r *http.Request) string {
+	contentType := r.URL.Query().Get("type")
+	for _, t := range supportedContentTypes {
+		if strings.ToLower(contentType) == strings.ToLower(t) {
+			return contentType
+		}
+	}
+	return defaultContentType
 }

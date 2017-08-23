@@ -41,7 +41,8 @@ func (n NotificationMapper) MapNotification(event PublicationEvent, transactionI
 		PublishReference: transactionID,
 		LastModified:     event.LastModified,
 		Title:            title,
-		Standout:         dispatcher.Standout{scoop},
+		Standout:         dispatcher.Standout{Scoop: scoop},
+		ContentType:      n.GetNotificationContentType(event),
 	}, nil
 }
 
@@ -66,4 +67,18 @@ func extractDataFromPayload(event PublicationEvent) (string, bool) {
 	}
 
 	return title, scoop
+}
+
+// GetNotificationContentType extracts the content type for a PublicationEvent
+func (n NotificationMapper) GetNotificationContentType(event PublicationEvent) string {
+	if event.HasEmptyPayload() {
+		return ""
+	}
+
+	notificationPayloadMap, ok := event.Payload.(map[string]interface{})
+	if ok && notificationPayloadMap["type"] != nil {
+		return notificationPayloadMap["type"].(string)
+	}
+
+	return ""
 }

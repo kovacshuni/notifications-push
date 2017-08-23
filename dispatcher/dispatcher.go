@@ -17,7 +17,7 @@ const (
 type Dispatcher interface {
 	Start()
 	Stop()
-	Send(notification ...Notification)
+	Send(notification ...NotificationInbound)
 	Subscribers() []Subscriber
 	Registrar
 }
@@ -34,7 +34,7 @@ func NewDispatcher(delay time.Duration, heartbeatPeriod time.Duration, history H
 	return &dispatcher{
 		delay:           delay,
 		heartbeatPeriod: heartbeatPeriod,
-		inbound:         make(chan Notification),
+		inbound:         make(chan NotificationInbound),
 		subscribers:     map[Subscriber]struct{}{},
 		lock:            &sync.RWMutex{},
 		history:         history,
@@ -42,10 +42,24 @@ func NewDispatcher(delay time.Duration, heartbeatPeriod time.Duration, history H
 	}
 }
 
+// NewNotificationInbound creates and returns a new NotificationInbound
+func NewNotificationInbound(notification Notification, contentType string) NotificationInbound {
+	return NotificationInbound{
+		notification: notification,
+		contentType:  contentType,
+	}
+}
+
+// NotificationInbound holds notification details and the corresponding content type for a notification
+type NotificationInbound struct {
+	notification Notification
+	contentType  string
+}
+
 type dispatcher struct {
 	delay           time.Duration
 	heartbeatPeriod time.Duration
-	inbound         chan Notification
+	inbound         chan NotificationInbound
 	subscribers     map[Subscriber]struct{}
 	lock            *sync.RWMutex
 	history         History
@@ -57,8 +71,8 @@ func (d *dispatcher) Start() {
 
 	for {
 		select {
-		case notification := <-d.inbound:
-			d.forwardToSubscribers(notification)
+		case i := <-d.inbound:
+			d.forwardToSubscribers(i)
 		case <-heartbeat.C:
 			d.heartbeat()
 		case <-d.stopChan:
@@ -70,13 +84,16 @@ func (d *dispatcher) Start() {
 	}
 }
 
-func (d *dispatcher) forwardToSubscribers(notification Notification) {
+func (d *dispatcher) forwardToSubscribers(i NotificationInbound) {
 	d.lock.RLock()
 	defer d.lock.RUnlock()
 	for sub := range d.subscribers {
-		err := sub.send(notification)
-		entry := log.WithField("transaction_id", notification.PublishReference).
-			WithField("resource", notification.APIURL).
+		if !sub.matchesContentType(i.notification, i.contentType) {
+			continue
+		}
+		err := sub.send(i.notification)
+		entry := log.WithField("transaction_id", i.notification.PublishReference).
+			WithField("resource", i.notification.APIURL).
 			WithField("subscriberAddress", sub.Address()).
 			WithField("subscriberSince", sub.Since().Format(time.RFC3339))
 		if err != nil {
@@ -86,7 +103,7 @@ func (d *dispatcher) forwardToSubscribers(notification Notification) {
 		}
 
 	}
-	d.history.Push(notification)
+	d.history.Push(i.notification)
 }
 
 func (d *dispatcher) heartbeat() {
@@ -101,12 +118,12 @@ func (d *dispatcher) Stop() {
 	d.stopChan <- true
 }
 
-func (d *dispatcher) Send(notifications ...Notification) {
+func (d *dispatcher) Send(notifications ...NotificationInbound) {
 	log.WithField("batchSize", len(notifications)).Infof("Received notifications batch. Waiting configured delay (%v).", d.delay)
 	go func() {
 		d.delayForCache()
 		for _, n := range notifications {
-			n.NotificationDate = time.Now().Format(rfc3339Millis)
+			n.notification.NotificationDate = time.Now().Format(rfc3339Millis)
 			d.inbound <- n
 		}
 	}()

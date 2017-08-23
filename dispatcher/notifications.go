@@ -10,9 +10,9 @@ type Notification struct {
 	NotificationDate string   `json:"notificationDate,omitempty"`
 	Title            string   `json:"title,omitempty"`
 	Standout         Standout `json:"standout"`
-	ContentType      string
 }
 
+// Standout model for a Notification
 type Standout struct {
 	Scoop bool `json:"scoop"`
 }

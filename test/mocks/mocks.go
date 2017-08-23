@@ -21,7 +21,7 @@ func (m *MockDispatcher) Stop() {
 }
 
 // Send mocks Send
-func (m *MockDispatcher) Send(notification ...dispatcher.Notification) {
+func (m *MockDispatcher) Send(notification ...dispatcher.NotificationInbound) {
 	m.Called(notification)
 }
 

@@ -53,11 +53,8 @@ func (s *standardSubscriber) matchesContentType(n Notification, contentType stri
 	if n.Type == "DELETE" || strings.ToLower(s.acceptedContentType) == "all" {
 		return true
 	}
-	if strings.ToLower(s.acceptedContentType) == strings.ToLower(contentType) {
-		return true
-	}
 
-	return false
+	return (strings.ToLower(s.acceptedContentType) == strings.ToLower(contentType))
 }
 
 func (s *standardSubscriber) send(n Notification) error {

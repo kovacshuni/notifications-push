@@ -83,7 +83,7 @@ func TestHandleMessage(t *testing.T) {
 	}
 
 	dispatcher := new(mocks.MockDispatcher)
-	dispatcher.On("Send", mock.AnythingOfType("[]dispatcher.NotificationInbound")).Return()
+	dispatcher.On("Send", mock.AnythingOfType("[]dispatcher.Notification")).Return()
 
 	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
 

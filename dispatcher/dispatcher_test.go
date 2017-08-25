@@ -49,7 +49,7 @@ func TestShoudDispatchNotificationsToMultipleSubscribers(t *testing.T) {
 	d.Register(m)
 
 	notBefore := time.Now()
-	d.Send(NotificationInbound{n1, typeArticle}, NotificationInbound{n2, typeArticle})
+	d.Send(n1, n2)
 
 	actualhbMessage := <-s.NotificationChannel()
 	assert.Equal(t, heartbeatMsg, actualhbMessage, "First message is a heartbeat")
@@ -121,7 +121,7 @@ func TestDispatchDelay(t *testing.T) {
 	actualhbMessage := <-s.NotificationChannel()
 
 	start := time.Now()
-	go d.Send(NotificationInbound{n1, typeArticle})
+	go d.Send(n1)
 
 	actualN1StdMsg := <-s.NotificationChannel()
 
@@ -198,7 +198,7 @@ func TestHeartbeatWithNotifications(t *testing.T) {
 	start = start.Add(heartbeat)
 	randDuration1 := time.Duration(rand.Intn(int(heartbeat.Seconds()-delay.Seconds()))) * time.Second
 	time.Sleep(randDuration1)
-	d.Send(NotificationInbound{n1, typeArticle})
+	d.Send(n1)
 	actualN1StdMsg := <-s.NotificationChannel()
 	verifyNotificationResponse(t, n1, zeroTime, zeroTime, actualN1StdMsg)
 
@@ -212,14 +212,14 @@ func TestHeartbeatWithNotifications(t *testing.T) {
 	start = time.Now()
 	randDuration2 := time.Duration(rand.Intn(int(heartbeat.Seconds()-delay.Seconds()))) * time.Second
 	time.Sleep(randDuration2)
-	d.Send(NotificationInbound{n2, typeArticle})
+	d.Send(n2)
 	actualN2StdMsg := <-s.NotificationChannel()
 	verifyNotificationResponse(t, n2, zeroTime, zeroTime, actualN2StdMsg)
 
 	// send two notifications
 	randDuration3 := time.Duration(rand.Intn(int(heartbeat.Seconds()-delay.Seconds()))) * time.Second
 	time.Sleep(randDuration3)
-	d.Send(NotificationInbound{n1, typeArticle}, NotificationInbound{n2, typeArticle})
+	d.Send(n1, n2)
 	actualN1StdMsg = <-s.NotificationChannel()
 	verifyNotificationResponse(t, n1, zeroTime, zeroTime, actualN1StdMsg)
 	actualN2StdMsg = <-s.NotificationChannel()
@@ -240,7 +240,7 @@ func TestDispatchedNotificationsInHistory(t *testing.T) {
 
 	notBefore := time.Now()
 
-	d.Send(NotificationInbound{n1, typeArticle}, NotificationInbound{n2, typeArticle})
+	d.Send(n1, n2)
 	time.Sleep(time.Duration(delay.Seconds()+1) * time.Second)
 
 	notAfter := time.Now()
@@ -249,7 +249,7 @@ func TestDispatchedNotificationsInHistory(t *testing.T) {
 	assert.Len(t, h.Notifications(), 2, "History contains 2 notifications")
 
 	for i := 0; i < historySize; i++ {
-		d.Send(NotificationInbound{n2, typeArticle})
+		d.Send(n2)
 	}
 	time.Sleep(time.Duration(delay.Seconds()+1) * time.Second)
 

@@ -13,7 +13,7 @@ import (
 // Subscriber represents the interface of a generic subscriber to a push stream
 type Subscriber interface {
 	send(n Notification) error
-	matchesContentType(n Notification, contentType string) bool
+	matchesContentType(n Notification) bool
 	NotificationChannel() chan string
 	writeOnMsgChannel(string)
 	Address() string
@@ -49,12 +49,12 @@ func (s *standardSubscriber) Since() time.Time {
 	return s.sinceTime
 }
 
-func (s *standardSubscriber) matchesContentType(n Notification, contentType string) bool {
-	if n.Type == "DELETE" || strings.ToLower(s.acceptedContentType) == "all" {
+func (s *standardSubscriber) matchesContentType(n Notification) bool {
+	if strings.Contains(n.Type, "DELETE") || strings.ToLower(s.acceptedContentType) == "all" {
 		return true
 	}
 
-	return (strings.ToLower(s.acceptedContentType) == strings.ToLower(contentType))
+	return strings.ToLower(s.acceptedContentType) == strings.ToLower(n.ContentType)
 }
 
 func (s *standardSubscriber) send(n Notification) error {

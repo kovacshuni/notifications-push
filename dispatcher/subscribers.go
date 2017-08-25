@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -12,6 +13,7 @@ import (
 // Subscriber represents the interface of a generic subscriber to a push stream
 type Subscriber interface {
 	send(n Notification) error
+	matchesContentType(n Notification) bool
 	NotificationChannel() chan string
 	writeOnMsgChannel(string)
 	Address() string
@@ -23,15 +25,17 @@ type standardSubscriber struct {
 	notificationChannel chan string
 	addr                string
 	sinceTime           time.Time
+	acceptedContentType string
 }
 
 // NewStandardSubscriber returns a new instance of a standard subscriber
-func NewStandardSubscriber(address string) Subscriber {
+func NewStandardSubscriber(address string, contentType string) Subscriber {
 	notificationChannel := make(chan string, 16)
 	return &standardSubscriber{
 		notificationChannel: notificationChannel,
 		addr:                address,
 		sinceTime:           time.Now(),
+		acceptedContentType: contentType,
 	}
 }
 
@@ -43,6 +47,14 @@ func (s *standardSubscriber) Address() string {
 // Since returns the time since a subscriber have been registered
 func (s *standardSubscriber) Since() time.Time {
 	return s.sinceTime
+}
+
+func (s *standardSubscriber) matchesContentType(n Notification) bool {
+	if strings.Contains(n.Type, "DELETE") || strings.ToLower(s.acceptedContentType) == "all" {
+		return true
+	}
+
+	return strings.ToLower(s.acceptedContentType) == strings.ToLower(n.ContentType)
 }
 
 func (s *standardSubscriber) send(n Notification) error {
@@ -106,8 +118,8 @@ type monitorSubscriber struct {
 }
 
 // NewMonitorSubscriber returns a new instance of a Monitor subscriber
-func NewMonitorSubscriber(address string) Subscriber {
-	return &monitorSubscriber{NewStandardSubscriber(address)}
+func NewMonitorSubscriber(address string, contentType string) Subscriber {
+	return &monitorSubscriber{NewStandardSubscriber(address, contentType)}
 }
 
 func (m *monitorSubscriber) send(n Notification) error {

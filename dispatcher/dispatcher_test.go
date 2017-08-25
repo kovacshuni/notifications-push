@@ -9,6 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	contentTypeFilter = "All"
+	typeArticle       = "Article"
+)
+
 var delay = 2 * time.Second
 var heartbeat = 3 * time.Second
 var historySize = 10
@@ -28,15 +33,14 @@ var n2 = Notification{
 	PublishReference: "tid_test2",
 	LastModified:     "2016-11-02T10:55:24.244Z",
 }
-
 var zeroTime = time.Time{}
 
 func TestShoudDispatchNotificationsToMultipleSubscribers(t *testing.T) {
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)
 
-	m := NewMonitorSubscriber("192.168.1.2")
-	s := NewStandardSubscriber("192.168.1.3")
+	m := NewMonitorSubscriber("192.168.1.2", contentTypeFilter)
+	s := NewStandardSubscriber("192.168.1.3", contentTypeFilter)
 
 	go d.Start()
 	defer d.Stop()
@@ -70,8 +74,8 @@ func TestAddAndDeleteOfSubscribers(t *testing.T) {
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)
 
-	m := NewMonitorSubscriber("192.168.1.2")
-	s := NewStandardSubscriber("192.168.1.3")
+	m := NewMonitorSubscriber("192.168.1.2", contentTypeFilter)
+	s := NewStandardSubscriber("192.168.1.3", contentTypeFilter)
 
 	go d.Start()
 	defer d.Stop()
@@ -107,7 +111,7 @@ func TestDispatchDelay(t *testing.T) {
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)
 
-	s := NewStandardSubscriber("192.168.1.3")
+	s := NewStandardSubscriber("192.168.1.3", contentTypeFilter)
 
 	go d.Start()
 	defer d.Stop()
@@ -138,7 +142,7 @@ func TestHeartbeat(t *testing.T) {
 	h := NewHistory(10)
 	d := NewDispatcher(delay, heartbeat, h)
 
-	s := NewStandardSubscriber("192.168.1.3")
+	s := NewStandardSubscriber("192.168.1.3", contentTypeFilter)
 
 	start := time.Now()
 	go d.Start()
@@ -167,7 +171,6 @@ func TestHeartbeat(t *testing.T) {
 	assert.InEpsilon(t, heartbeat.Nanoseconds(), actualHbDelay.Nanoseconds(), 0.05, "The third heartbeat delay is correct with 0.05 relative error")
 	assert.Equal(t, heartbeatMsg, actualHbMsg, "The fourth heartbeat message is correct")
 }
-
 func TestHeartbeatWithNotifications(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Heartbeat for long tests only.")
@@ -176,7 +179,7 @@ func TestHeartbeatWithNotifications(t *testing.T) {
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)
 
-	s := NewStandardSubscriber("192.168.1.3")
+	s := NewStandardSubscriber("192.168.1.3", contentTypeFilter)
 
 	start := time.Now()
 	go d.Start()
@@ -228,7 +231,6 @@ func TestHeartbeatWithNotifications(t *testing.T) {
 	assert.InEpsilon(t, randDuration2.Nanoseconds()+randDuration3.Nanoseconds()+heartbeat.Nanoseconds(), actualHbDelay.Nanoseconds(), 0.05, "The third heartbeat delay is correct with 0.05 relative error")
 	assert.Equal(t, heartbeatMsg, actualHbMsg, "The fourth heartbeat message is correct")
 }
-
 func TestDispatchedNotificationsInHistory(t *testing.T) {
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)

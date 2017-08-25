@@ -74,6 +74,9 @@ func (d *dispatcher) forwardToSubscribers(notification Notification) {
 	d.lock.RLock()
 	defer d.lock.RUnlock()
 	for sub := range d.subscribers {
+		if !sub.matchesContentType(notification) {
+			continue
+		}
 		err := sub.send(notification)
 		entry := log.WithField("transaction_id", notification.PublishReference).
 			WithField("resource", notification.APIURL).

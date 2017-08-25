@@ -7,6 +7,7 @@ import (
 	"github.com/Financial-Times/notifications-push/test/mocks"
 
 	"github.com/Financial-Times/kafka-client-go/kafka"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -92,6 +93,23 @@ func TestHandleMessage(t *testing.T) {
 
 	handler.HandleMessage(msg)
 	dispatcher.AssertExpectations(t)
+}
+
+func TestHandleMessageMappingError(t *testing.T) {
+	mapper := NotificationMapper{
+		APIBaseURL: "test.api.ft.com",
+		Resource:   "lists",
+	}
+
+	dispatcher := new(mocks.MockDispatcher)
+	handler := NewMessageQueueHandler(defaultWhitelist, mapper, dispatcher)
+
+	msg := kafka.NewFTMessage(map[string]string{"X-Request-Id": "tid_summin"},
+		`{"UUID": "", "ContentURI": "http://list-transformer-pr-uk-up.svc.ft.com:8080/lists/blah/abc"}`)
+	err := handler.HandleMessage(msg)
+	assert.NotNil(t, err, "Expected error to HandleMessage when UUID is empty")
+
+	dispatcher.AssertNotCalled(t, "Send")
 }
 
 func TestDiscardStandardCarouselPublicationEvents(t *testing.T) {

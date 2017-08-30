@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/fleet/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

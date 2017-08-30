@@ -6,7 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coreos/fleet/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -24,6 +26,7 @@ var n1 = Notification{
 	Type:             "http://www.ft.com/thing/ThingChangeType/UPDATE",
 	PublishReference: "tid_test1",
 	LastModified:     "2016-11-02T10:54:22.234Z",
+	ContentType:      "ContentPackage",
 }
 
 var n2 = Notification{
@@ -35,7 +38,7 @@ var n2 = Notification{
 }
 var zeroTime = time.Time{}
 
-func TestShoudDispatchNotificationsToMultipleSubscribers(t *testing.T) {
+func TestShouldDispatchNotificationsToMultipleSubscribers(t *testing.T) {
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)
 
@@ -59,6 +62,44 @@ func TestShoudDispatchNotificationsToMultipleSubscribers(t *testing.T) {
 
 	actualN2StdMsg := <-s.NotificationChannel()
 	verifyNotificationResponse(t, n2, zeroTime, zeroTime, actualN2StdMsg)
+
+	actualhbMessage = <-m.NotificationChannel()
+	assert.Equal(t, heartbeatMsg, actualhbMessage, "First message is a heartbeat")
+
+	actualN1MonitorMsg := <-m.NotificationChannel()
+	verifyNotificationResponse(t, n1, notBefore, time.Now(), actualN1MonitorMsg)
+
+	actualN2MonitorMsg := <-m.NotificationChannel()
+	verifyNotificationResponse(t, n2, notBefore, time.Now(), actualN2MonitorMsg)
+}
+
+func TestShouldDispatchNotificationsToSubscribersByType(t *testing.T) {
+	h := NewHistory(historySize)
+	d := NewDispatcher(delay, heartbeat, h)
+
+	m := NewMonitorSubscriber("192.168.1.2", contentTypeFilter)
+	s := NewStandardSubscriber("192.168.1.3", typeArticle)
+
+	go d.Start()
+	defer d.Stop()
+
+	d.Register(s)
+	d.Register(m)
+
+	notBefore := time.Now()
+	d.Send(n1, n2)
+
+	actualhbMessage := <-s.NotificationChannel()
+	log.Infof("actualhbMessage: %v", actualhbMessage)
+	assert.Equal(t, heartbeatMsg, actualhbMessage, "First message is a heartbeat")
+
+	actualN2StdMsg := <-s.NotificationChannel()
+	log.Infof("actualN2StdMsg: %v", actualN2StdMsg)
+	verifyNotificationResponse(t, n2, zeroTime, zeroTime, actualN2StdMsg)
+
+	anotherHbMsg := <-s.NotificationChannel()
+	log.Infof("anotherHbMsg: %v", anotherHbMsg)
+	assert.Equal(t, heartbeatMsg, actualhbMessage, "Third message is a heartbeat")
 
 	actualhbMessage = <-m.NotificationChannel()
 	assert.Equal(t, heartbeatMsg, actualhbMessage, "First message is a heartbeat")
@@ -260,6 +301,7 @@ func TestDispatchedNotificationsInHistory(t *testing.T) {
 func verifyNotificationResponse(t *testing.T, expected Notification, notBefore time.Time, notAfter time.Time, actualMsg string) {
 	actualNotifications := []Notification{}
 	json.Unmarshal([]byte(actualMsg), &actualNotifications)
+	require.True(t, len(actualNotifications) > 0)
 	actual := actualNotifications[0]
 
 	verifyNotification(t, expected, notBefore, notAfter, actual)

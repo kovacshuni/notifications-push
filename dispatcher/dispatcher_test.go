@@ -90,16 +90,13 @@ func TestShouldDispatchNotificationsToSubscribersByType(t *testing.T) {
 	d.Send(n1, n2)
 
 	actualhbMessage := <-s.NotificationChannel()
-	log.Infof("actualhbMessage: %v", actualhbMessage)
 	assert.Equal(t, heartbeatMsg, actualhbMessage, "First message is a heartbeat")
 
 	actualN2StdMsg := <-s.NotificationChannel()
-	log.Infof("actualN2StdMsg: %v", actualN2StdMsg)
 	verifyNotificationResponse(t, n2, zeroTime, zeroTime, actualN2StdMsg)
 
 	anotherHbMsg := <-s.NotificationChannel()
-	log.Infof("anotherHbMsg: %v", anotherHbMsg)
-	assert.Equal(t, heartbeatMsg, actualhbMessage, "Third message is a heartbeat")
+	assert.Equal(t, heartbeatMsg, anotherHbMsg, "Third message is a heartbeat")
 
 	actualhbMessage = <-m.NotificationChannel()
 	assert.Equal(t, heartbeatMsg, actualhbMessage, "First message is a heartbeat")

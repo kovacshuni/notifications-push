@@ -40,7 +40,7 @@ export NOTIFICATIONS_RESOURCE=content \
     && export TOPIC=PostPublicationEvents \
     && export NOTIFICATIONS_DELAY=10 \
     && export API_BASE_URL="http://api.ft.com" \
-    && export WHITELIST="^http://(methode|wordpress|content)-(article|collection)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$" \
+    && export WHITELIST="^http://(methode|wordpress|content)-(article|collection|content-placeholder)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$" \
     && ./notifications-push
 ```
 
@@ -55,7 +55,7 @@ export NOTIFICATIONS_RESOURCE=content \
     --notifications_delay=10 \
     --api-base-url="http://api.ft.com" \
     --api_key_validation_endpoint="t800/a" \
-    --whitelist="^http://(methode|wordpress|content)-(article|collection)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$"
+    --whitelist="^http://(methode|wordpress|content)-(article|collection|content-placeholder)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$"
 ```
 
 NB: for the complete list of options run `./notifications-push -h`
@@ -63,6 +63,12 @@ NB: for the complete list of options run `./notifications-push -h`
 HTTP endpoints
 ----------
 ```curl -i --header "x-api-key: «api_key»" https://api.ft.com/content/notifications-push```
+
+The following content types could be also specified for which the client would like to receive notifications by setting a "type" parameter on the request: `Article`, `ContentPackage`, `MediaResource`, `Video`, `Image`, `Graphic`, `ImageSet` and `All` to include everything.
+If not specified, by default `Article` is used. If an invalid type is requested an HTTP 400 Bad Request is returned.
+
+E.g.
+```curl -i --header "x-api-key: «api_key»" https://api.ft.com/content/notifications-push?type=Article```
 
 ### Push stream
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	log "github.com/Sirupsen/logrus"
+	"fmt"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 	defaultContentType = "Article"
 )
 
-var supportedContentTypes = []string{"Article", "Content", "ContentPackage", "All"}
+var supportedContentTypes = []string{"Article", "ContentPackage", "All"}
 
 //ApiKey is provided either as a request param or as a header.
 func getApiKey(r *http.Request) string {
@@ -51,7 +52,12 @@ func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClien
 
 		bw := bufio.NewWriter(w)
 
-		contentTypeParam := resolveContentType(r)
+		contentTypeParam, err := resolveContentType(r)
+		if err != nil {
+			log.WithError(err).Error("Invalid content type")
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		monitorParam := r.URL.Query().Get("monitor")
 		isMonitor, _ := strconv.ParseBool(monitorParam)
 
@@ -99,12 +105,15 @@ func getClientAddr(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-func resolveContentType(r *http.Request) string {
+func resolveContentType(r *http.Request) (string, error) {
 	contentType := r.URL.Query().Get("type")
+	if contentType == "" {
+		return defaultContentType, nil
+	}
 	for _, t := range supportedContentTypes {
 		if strings.ToLower(contentType) == strings.ToLower(t) {
-			return contentType
+			return contentType, nil
 		}
 	}
-	return defaultContentType
+	return "", fmt.Errorf("The specified type (%s) is unsupported", contentType)
 }

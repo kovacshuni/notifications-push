@@ -18,6 +18,7 @@ type Subscriber interface {
 	writeOnMsgChannel(string)
 	Address() string
 	Since() time.Time
+	AcceptedContentType() string
 }
 
 // StandardSubscriber implements a standard subscriber
@@ -42,6 +43,11 @@ func NewStandardSubscriber(address string, contentType string) Subscriber {
 // Address returns the IP address of the standard subscriber
 func (s *standardSubscriber) Address() string {
 	return s.addr
+}
+
+// AcceptedContentType returns the accepted content type for which notifications are returned
+func (s *standardSubscriber) AcceptedContentType() string {
+	return s.acceptedContentType
 }
 
 // Since returns the time since a subscriber have been registered

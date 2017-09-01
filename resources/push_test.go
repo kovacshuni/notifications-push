@@ -55,7 +55,7 @@ func TestPushStandardSubscriber(t *testing.T) {
 	assert.Equal(t, "0", w.Header().Get("Expires"))
 
 	reader := bufio.NewReader(w.Body)
-	body, _ := reader.ReadString(byte(rune(0))) // read to EOF
+	body, _ := reader.ReadString(byte(0)) // read to EOF
 
 	assert.Equal(t, "data: hi\n\n", body)
 
@@ -99,7 +99,7 @@ func TestPushMonitorSubscriber(t *testing.T) {
 	assert.Equal(t, "0", w.Header().Get("Expires"))
 
 	reader := bufio.NewReader(w.Body)
-	body, _ := reader.ReadString(byte(rune(0))) // read to EOF
+	body, _ := reader.ReadString(byte(0)) // read to EOF
 
 	assert.Equal(t, "data: hi\n\n", body)
 
@@ -121,6 +121,42 @@ func TestPushFailed(t *testing.T) {
 	})
 	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestPushInvalidType(t *testing.T) {
+	d := new(MockDispatcher)
+	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+
+	w := NewStreamResponseRecorder()
+	req, err := http.NewRequest("GET", "/content/notifications-push?type=InvalidType", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Set("X-Forwarded-For", "some-host, some-other-host-that-isnt-used")
+	req.Header.Set(apiKeyHeaderField, "some-api-key")
+
+	start = func(sub dispatcher.Subscriber) {
+		sub.NotificationChannel() <- "hi"
+		time.Sleep(10 * time.Millisecond)
+		w.closer <- true
+
+		assert.True(t, time.Now().After(sub.Since()))
+		assert.Equal(t, "some-host", sub.Address())
+	}
+
+	httpClient := initializeMockHTTPClient(&mockTransport{
+		responseStatusCode: http.StatusOK,
+	})
+	Push(d, "http://dummy.ft.com", httpClient)(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	reader := bufio.NewReader(w.Body)
+	body, _ := reader.ReadString(byte(0)) // read to EOF
+
+	assert.True(t, strings.Contains(body, "The specified type (InvalidType) is unsupported"))
 }
 
 func TestMasheryDown(t *testing.T) {

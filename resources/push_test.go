@@ -55,7 +55,7 @@ func TestPushStandardSubscriber(t *testing.T) {
 	assert.Equal(t, "0", w.Header().Get("Expires"))
 
 	reader := bufio.NewReader(w.Body)
-	body, _ := reader.ReadString(byte(rune(0))) // read to EOF
+	body, _ := reader.ReadString(byte(0)) // read to EOF
 
 	assert.Equal(t, "data: hi\n\n", body)
 
@@ -99,7 +99,7 @@ func TestPushMonitorSubscriber(t *testing.T) {
 	assert.Equal(t, "0", w.Header().Get("Expires"))
 
 	reader := bufio.NewReader(w.Body)
-	body, _ := reader.ReadString(byte(rune(0))) // read to EOF
+	body, _ := reader.ReadString(byte(0)) // read to EOF
 
 	assert.Equal(t, "data: hi\n\n", body)
 
@@ -154,7 +154,7 @@ func TestPushInvalidType(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	reader := bufio.NewReader(w.Body)
-	body, _ := reader.ReadString(byte(rune(0))) // read to EOF
+	body, _ := reader.ReadString(byte(0)) // read to EOF
 
 	assert.True(t, strings.Contains(body, "The specified type (InvalidType) is unsupported"))
 }

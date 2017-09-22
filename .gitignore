@@ -4,6 +4,7 @@
 /notifications-push-client
 /.env
 *.iml
-
+vendor/*/
 /.project
 vendor/*/
+/.vscode

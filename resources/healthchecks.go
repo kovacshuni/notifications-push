@@ -4,17 +4,18 @@ import (
 	"net/http"
 
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
-	"github.com/Financial-Times/message-queue-gonsumer/consumer"
+	"github.com/Financial-Times/kafka-client-go/kafka"
 	"github.com/Financial-Times/service-status-go/gtg"
+	"errors"
 )
 
 type HealthCheck struct {
-	consumer consumer.MessageConsumer
+	Consumer kafka.Consumer
 }
 
-func NewHealthCheck(c consumer.MessageConsumer) *HealthCheck {
+func NewHealthCheck(kafkaConsumer kafka.Consumer) *HealthCheck {
 	return &HealthCheck{
-		consumer: c,
+Consumer: kafkaConsumer,
 	}
 }
 
@@ -29,21 +30,32 @@ func (h *HealthCheck) Health() func(w http.ResponseWriter, r *http.Request) {
 	return fthealth.Handler(hc)
 }
 
+// Check is the the NotificationsPushHealthcheck method that checks if the kafka queue is available
 func (h *HealthCheck) queueCheck() fthealth.Check {
 	return fthealth.Check{
-		ID:               "message-queue-proxy-reachable",
-		Name:             "Message Queue Proxy Reachable",
+		ID:               "message-queue-reachable",
+		Name:             "MessageQueueReachable",
 		Severity:         1,
 		BusinessImpact:   "Notifications about newly modified/published content will not reach this app, nor will they reach its clients.",
-		TechnicalSummary: "Message queue proxy is not reachable/healthy",
+		TechnicalSummary: "Message queue is not reachable/healthy",
 		PanicGuide:       "https://dewey.ft.com/upp-notifications-push.html",
-		Checker:          h.consumer.ConnectivityCheck,
+		Checker:          h.checkAggregateMessageQueueReachable,
 	}
 }
 
 func (h *HealthCheck) GTG() gtg.Status {
-	if _, err := h.consumer.ConnectivityCheck(); err != nil {
+	if _,err := h.checkAggregateMessageQueueReachable(); err != nil {
 		return gtg.Status{GoodToGo: false, Message: err.Error()}
 	}
 	return gtg.Status{GoodToGo: true}
+}
+
+func (hc *HealthCheck) checkAggregateMessageQueueReachable() (string, error) {
+	// ISSUE: consumer's helthcheck always returns true
+	err := hc.Consumer.ConnectivityCheck()
+	if err == nil {
+		return "Connectivity to kafka is OK.", nil
+	}
+
+	return "Error connecting to kafka", errors.New("Error connecting to kafka queue")
 }

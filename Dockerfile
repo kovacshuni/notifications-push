@@ -22,10 +22,10 @@ RUN apk --no-cache --virtual .build-dependencies add git \
   && go get -u github.com/kardianos/govendor \
   && $GOPATH/bin/govendor sync \
   && go build -ldflags="${LDFLAGS}" \
-  && mv ${PROJECT} /${PROJECT} \
+  && mv ${PROJECT} /${PROJECT}-app \
   && apk del .build-dependencies \
   && rm -rf $GOPATH /var/cache/apk/*
 
 WORKDIR /
 
-CMD [ "/notifications-push" ]
+CMD [ "/notifications-push-app" ]

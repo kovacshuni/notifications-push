@@ -9,26 +9,38 @@ The microservice consumes a specific Apache Kafka topic group, then it pushes a 
 How to Build & Run the binary
 -----------------------------
 
-1. Build and test:
+1. Install, build and test:
 ```
 go get -u github.com/kardianos/govendor
 go get -u github.com/Financial-Times/notifications-push
 cd $GOPATH/src/github.com/Financial-Times/notifications-push
+
 govendor sync
-go build .
-govendor test +local
+govendor test -v -race
+go install
 ```
-2. Run:
+2. Run locally:
 
-* via environment variables:
+* Create tunnel to the Kafka service inside the cluster for ports 2181 and 9092 (use the public IP):
+```
+ssh -L 2181:localhost:2181 -L 9092:localhost:9092 username@<host>
+```
+
+* Add the private DNS of the Kafka machine to the hosts file:
+```
+127.0.0.1       <private_dns> 
+```
+
+* Start the service using environment variables:
 
 ```
-export QUEUE_PROXY_ADDRS="http://ftapp14714-lvpr-uk-t:8080,http://ftapp14721-lvpr-uk-t:8080" \
-    && export NOTIFICATIONS_RESOURCE="content" \
-    && export GROUP_ID="notifications-push-yourtest" \
-    && export AUTHORIZATION_KEY="$(ssh semantic-tunnel-up.ft.com etcdctl get /ft/_credentials/kafka-bridge/authorization_key)" \
-    && export TOPIC=CmsPublicationEvents \
+export NOTIFICATIONS_RESOURCE=content \
+    && export KAFKA_ADDRS=localhost:2181 \
+    && export GROUP_ID=notifications-push-yourtest \
+    && export TOPIC=PostPublicationEvents \
+    && export NOTIFICATIONS_DELAY=10 \
     && export API_BASE_URL="http://api.ft.com" \
+    && export WHITELIST="^http://(methode|wordpress|content)-(article|collection|content-placeholder)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$" \
     && ./notifications-push
 ```
 
@@ -36,18 +48,27 @@ export QUEUE_PROXY_ADDRS="http://ftapp14714-lvpr-uk-t:8080,http://ftapp14721-lvp
 
 ```
 ./notifications-push \
-    --notifications_resourse="content"
-    --consumer_proxy_addr="https://kafka-proxy-iw-uk-p-1.glb.ft.com,https://kafka-proxy-iw-uk-p-2.glb.ft.com" \
+    --notifications_resource="content" \
+    --consumer_addr="localhost:2181" \
     --consumer_group_id="notifications-push" \
-    --consumer_authorization_key "$(ssh semantic-tunnel-up.ft.com etcdctl get /ft/_credentials/kafka-bridge/authorization_key)" \
+    --topic="PostPublicationEvents" \
+    --notifications_delay=10 \
     --api-base-url="http://api.ft.com" \
-    --topic="CmsPublicationEvents"
+    --api_key_validation_endpoint="t800/a" \
+    --whitelist="^http://(methode|wordpress|content)-(article|collection|content-placeholder)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$"
 ```
 
 NB: for the complete list of options run `./notifications-push -h`
 
 HTTP endpoints
 ----------
+```curl -i --header "x-api-key: «api_key»" https://api.ft.com/content/notifications-push```
+
+The following content types could be also specified for which the client would like to receive notifications by setting a "type" parameter on the request: `Article`, `ContentPackage` and `All` to include everything (also CPHs).
+If not specified, by default `Article` is used. If an invalid type is requested an HTTP 400 Bad Request is returned.
+
+E.g.
+```curl -i --header "x-api-key: «api_key»" https://api.ft.com/content/notifications-push?type=Article```
 
 ### Push stream
 
@@ -59,7 +80,7 @@ data: []
 
 data: []
 
-data: [{"apiUrl":"http://api.ft.com/content/648bda7b-1187-3496-b48e-57ecb14d5b0a","id":"http://www.ft.com/thing/648bda7b-1187-3496-b48e-57ecb14d5b0a","type":"http://www.ft.com/thing/ThingChangeType/UPDATE"}]
+data: [{"apiUrl":"http://api.ft.com/content/648bda7b-1187-3496-b48e-57ecb14d5b0a","id":"http://www.ft.com/thing/648bda7b-1187-3496-b48e-57ecb14d5b0a","type":"http://www.ft.com/thing/ThingChangeType/UPDATE","title":"For Ioana & Ioana only;","standout":{"scoop":true}}]
 
 data: []
 
@@ -67,15 +88,15 @@ data: []
 
 data: []
 
-data: [{"apiUrl":"http://api.ft.com/content/e2e49a44-ef3c-11e5-aff5-19b4e253664a","id":"http://www.ft.com/thing/e2e49a44-ef3c-11e5-aff5-19b4e253664a","type":"http://www.ft.com/thing/ThingChangeType/UPDATE"}]
+data: [{"apiUrl":"http://api.ft.com/content/e2e49a44-ef3c-11e5-aff5-19b4e253664a","id":"http://www.ft.com/thing/e2e49a44-ef3c-11e5-aff5-19b4e253664a","type":"http://www.ft.com/thing/ThingChangeType/UPDATE","title":"For Ioana 2","standout":{"scoop":false}}]
 
 data: []
 
-data: [{"apiUrl":"http://api.ft.com/content/d38489fa-ecf4-11e5-888e-2eadd5fbc4a4","id":"http://www.ft.com/thing/d38489fa-ecf4-11e5-888e-2eadd5fbc4a4","type":"http://www.ft.com/thing/ThingChangeType/UPDATE"}]
+data: [{"apiUrl":"http://api.ft.com/content/d38489fa-ecf4-11e5-888e-2eadd5fbc4a4","id":"http://www.ft.com/thing/d38489fa-ecf4-11e5-888e-2eadd5fbc4a4","type":"http://www.ft.com/thing/ThingChangeType/UPDATE","title":"For Ioana 3","standout":{"scoop":false}}]
 
-data: [{"apiUrl":"http://api.ft.com/content/648bda7b-1187-3496-b48e-57ecb14d5b0a","id":"http://www.ft.com/thing/648bda7b-1187-3496-b48e-57ecb14d5b0a","type":"http://www.ft.com/thing/ThingChangeType/UPDATE"}]
+data: [{"apiUrl":"http://api.ft.com/content/648bda7b-1187-3496-b48e-57ecb14d5b0a","id":"http://www.ft.com/thing/648bda7b-1187-3496-b48e-57ecb14d5b0a","type":"http://www.ft.com/thing/ThingChangeType/UPDATE","title":"For Ioana 4","standout":{"scoop":false}}]
 
-data: [{"apiUrl":"http://api.ft.com/content/648bda7b-1187-3496-b48e-57ecb14d5b0a","id":"http://www.ft.com/thing/648bda7b-1187-3496-b48e-57ecb14d5b0a","type":"http://www.ft.com/thing/ThingChangeType/UPDATE"}]
+data: [{"apiUrl":"http://api.ft.com/content/648bda7b-1187-3496-b48e-57ecb14d5b0a","id":"http://www.ft.com/thing/648bda7b-1187-3496-b48e-57ecb14d5b0a","type":"http://www.ft.com/thing/ThingChangeType/UPDATE","title":"For Ioana 4","standout":{"scoop":false}}]
 ```
 
 The empty `[]` lines are heartbeats. Notifications-push will send a heartbeat every 30 seconds to keep the connection active.
@@ -93,6 +114,8 @@ curl -X GET "https://<user>@<password>:pre-prod-up.ft.com/lists/notifications-pu
 **WARNING: In CoCo, this endpoint does not work under `/__notifications-push/` and `/__list-notifications-push/`.**
 The reason for this is because Vulcan does not support long polling of HTTP requests. We worked around this issue by forwarding messages through Varnish to a fixed port for both services.
 
+**Productionizing Push API:**
+Mashery does not support long polling of HTTP requests, so the requests come through Fastly. Everytime a client tries to connect to Notifications Push, the service performs a call to Mashery in order to validate the API key from the client.
 
 ### Notification history
 A HTTP GET to the `/__history` endpoint will return the history of the last notifications consumed from the Kakfa queue.
@@ -152,11 +175,13 @@ How to Build & Run with Docker
 ```
     docker build -t coco/notifications-push .
 
-    docker run --env QUEUE_PROXY_ADDRS="http://ftapp14714-lvpr-uk-t:8080,http://ftapp14721-lvpr-uk-t:8080" \
+    docker run --env NOTIFICATIONS_RESOURCE=content \
+        --env KAFKA_ADDRS=localhost:2181 \
         --env GROUP_ID="notifications-push-yourtest" \
-        --env AUTHORIZATION_KEY="can't tell, get it by etcdctl get /ft/_credentials/kafka-bridge/authorization_key" \
-        --env TOPIC="CmsPublicationEvents" \
+        --env TOPIC="PostPublicationEvents" \
+        --env NOTIFICATIONS_DELAY=10 \
         --env API_BASE_URL="http://api.ft.com" \
+        --env WHITELIST="^http://(methode|wordpress|content)-(article|collection)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$" \
         coco/notifications-push
 ```
 
@@ -167,5 +192,15 @@ Example client code is provided in `bin/client` directory
 
 Useful Links
 ------------
-* Production: https://prod-coco-up-read.ft.com/content/notifications-push (needs credentials)
-* Production: https://prod-coco-up-read.ft.com/lists/notifications-push (needs credentials)
+* Production: 
+
+[https://api.ft.com/content/notifications-push](#https://api.ft.com/content/notifications-push?apiKey=555) (needs API key)
+
+[https://api.ft.com/lists/notifications-push](#https://api.ft.com/content/notifications-push?apiKey=555) (needs API key)
+
+* For internal use:
+
+[https://prod-coco-up-read.ft.com/content/notifications-push](#https://prod-coco-up-read.ft.com/content/notifications-push) (needs credentials) 
+
+[https://prod-coco-up-read.ft.com/lists/notifications-push](#https://prod-coco-up-read.ft.com/lists/notifications-push) (needs credentials)
+

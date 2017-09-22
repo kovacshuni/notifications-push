@@ -8,8 +8,8 @@ import (
 )
 
 func TestMapToUpdateNotification(t *testing.T) {
-
-	payload := struct{ Foo string }{"bar"}
+	standout := map[string]interface{}{"scoop": true}
+	payload := map[string]interface{}{"title": "This is a title", "standout": standout, "type": "Article"}
 
 	event := PublicationEvent{
 		ContentURI:   "http://list-transformer-pr-uk-up.svc.ft.com:8081/list/blah/" + uuid.NewV4().String(),
@@ -24,12 +24,14 @@ func TestMapToUpdateNotification(t *testing.T) {
 
 	n, err := mapper.MapNotification(event, "tid_test1")
 
-	assert.Equal(t, "http://www.ft.com/thing/ThingChangeType/UPDATE", n.Type, "It is an UPDATE notification")
 	assert.Nil(t, err, "The mapping should not return an error")
+	assert.Equal(t, "http://www.ft.com/thing/ThingChangeType/UPDATE", n.Type, "It is an UPDATE notification")
+	assert.Equal(t, "This is a title", n.Title, "Title should pe mapped correctly")
+	assert.Equal(t, true, n.Standout.Scoop, "Scoop field should be mapped correctly")
+	assert.Equal(t, "Article", n.ContentType, "ContentType field should be mapped correctly")
 }
 
 func TestMapToUpdateNotification_ForContentWithVersion3UUID(t *testing.T) {
-
 	payload := struct{ Foo string }{"bar"}
 
 	event := PublicationEvent{
@@ -47,10 +49,10 @@ func TestMapToUpdateNotification_ForContentWithVersion3UUID(t *testing.T) {
 
 	assert.Equal(t, "http://www.ft.com/thing/ThingChangeType/UPDATE", n.Type, "It is an UPDATE notification")
 	assert.Nil(t, err, "The mapping should not return an error")
+	assert.Equal(t, "", n.Title, "Empty title should pe mapped correctly")
 }
 
 func TestMapToDeleteNotification(t *testing.T) {
-
 	event := PublicationEvent{
 		ContentURI:   "http://list-transformer-pr-uk-up.svc.ft.com:8080/list/blah/" + uuid.NewV4().String(),
 		LastModified: "2016-11-02T10:54:22.234Z",
@@ -83,4 +85,27 @@ func TestNotificationMappingFailure(t *testing.T) {
 	_, err := mapper.MapNotification(event, "tid_test1")
 
 	assert.NotNil(t, err, "The mapping should fail")
+}
+
+func TestNotificationMappingFieldsNotExtractedFromPayload(t *testing.T) {
+	payload := map[string]interface{}{"foo": "bar"}
+
+	event := PublicationEvent{
+		ContentURI:   "http://list-transformer-pr-uk-up.svc.ft.com:8081/list/blah/" + uuid.NewV4().String(),
+		LastModified: "2016-11-02T10:54:22.234Z",
+		Payload:      payload,
+	}
+
+	mapper := NotificationMapper{
+		APIBaseURL: "test.api.ft.com",
+		Resource:   "list",
+	}
+
+	n, err := mapper.MapNotification(event, "tid_test1")
+
+	assert.Nil(t, err, "The mapping should not return an error")
+	assert.Equal(t, "http://www.ft.com/thing/ThingChangeType/UPDATE", n.Type, "It is an UPDATE notification")
+	assert.Empty(t, n.Title, "Title should be empty when it cannot be extracted from payload")
+	assert.Equal(t, false, n.Standout.Scoop, "Scoop field should be set to false when it cannot be extracted from payload")
+	assert.Equal(t, "", n.ContentType, "ContentType field should be empty when it cannot be extracted from payload")
 }

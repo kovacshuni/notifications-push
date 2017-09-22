@@ -1,7 +1,6 @@
 package resources
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/Financial-Times/notifications-push/dispatcher"
@@ -12,9 +11,9 @@ import (
 func History(history dispatcher.History) func(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Serving /__history request"
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-type", "application/json")
+		w.Header().Set("Content-type", "application/json; charset=UTF-8")
 
-		historyJSON, err := json.Marshal(history.Notifications())
+		historyJSON, err := dispatcher.MarshalNotificationsJSON(history.Notifications())
 		if err != nil {
 			log.WithError(err).Warn(errMsg)
 			http.Error(w, "", http.StatusInternalServerError)

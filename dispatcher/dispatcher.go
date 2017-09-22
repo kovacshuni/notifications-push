@@ -74,6 +74,9 @@ func (d *dispatcher) forwardToSubscribers(notification Notification) {
 	d.lock.RLock()
 	defer d.lock.RUnlock()
 	for sub := range d.subscribers {
+		if !sub.matchesContentType(notification) {
+			continue
+		}
 		err := sub.send(notification)
 		entry := log.WithField("transaction_id", notification.PublishReference).
 			WithField("resource", notification.APIURL).
@@ -121,7 +124,7 @@ func (d *dispatcher) Register(subscriber Subscriber) {
 	defer d.lock.Unlock()
 
 	d.subscribers[subscriber] = struct{}{}
-	log.WithField("subscriber", subscriber.Address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).Info("Registered new subscriber")
+	log.WithField("subscriber", subscriber.Address()).WithField("subscriberType", reflect.TypeOf(subscriber).Elem().Name()).WithField("acceptedContentType", subscriber.AcceptedContentType()).Info("Registered new subscriber")
 
 	subscriber.writeOnMsgChannel(heartbeatMsg)
 }

@@ -14,7 +14,7 @@ resources:
 env:
   GROUP_ID: ""
   TOPIC: ""
-  NOTIFICATIONS_DELAY: ""
   CONSUMER_BACKOFF: ""
   NOTIFICATIONS_RESOURCE: ""
-  WHITELIST: ""
+  WHITELIST:  ""
+  PUSH_PORT: ""

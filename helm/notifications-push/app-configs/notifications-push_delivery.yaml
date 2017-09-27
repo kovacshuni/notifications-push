@@ -5,7 +5,7 @@ service:
 env:
   GROUP_ID: "k8s-notifications-push"
   TOPIC: "PostPublicationEvents"
-  NOTIFICATIONS_DELAY: "10"
   CONSUMER_BACKOFF: "2"
   NOTIFICATIONS_RESOURCE: "content"
-  WHITELIST: "^http://(methode|wordpress)-(article)-(transformer|mapper)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$"
+  WHITELIST: "^http://(methode|wordpress|content)-(article|collection|content-placeholder)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$"
+  PUSH_PORT: "8599"

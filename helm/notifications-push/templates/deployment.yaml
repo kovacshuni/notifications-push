@@ -32,7 +32,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: api.host
+              key: api.host.with.protocol
         - name: GROUP_ID
           value: {{ .Values.env.GROUP_ID }}
         - name: TOPIC

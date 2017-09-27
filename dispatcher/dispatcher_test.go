@@ -7,6 +7,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+const (
+	contentTypeFilter = "All"
+	typeArticle       = "Article"
 )
 
 var delay = 2 * time.Second
@@ -19,6 +25,7 @@ var n1 = Notification{
 	Type:             "http://www.ft.com/thing/ThingChangeType/UPDATE",
 	PublishReference: "tid_test1",
 	LastModified:     "2016-11-02T10:54:22.234Z",
+	ContentType:      "ContentPackage",
 }
 
 var n2 = Notification{
@@ -28,15 +35,14 @@ var n2 = Notification{
 	PublishReference: "tid_test2",
 	LastModified:     "2016-11-02T10:55:24.244Z",
 }
-
 var zeroTime = time.Time{}
 
-func TestShoudDispatchNotificationsToMultipleSubscribers(t *testing.T) {
+func TestShouldDispatchNotificationsToMultipleSubscribers(t *testing.T) {
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)
 
-	m := NewMonitorSubscriber("192.168.1.2")
-	s := NewStandardSubscriber("192.168.1.3")
+	m := NewMonitorSubscriber("192.168.1.2", contentTypeFilter)
+	s := NewStandardSubscriber("192.168.1.3", contentTypeFilter)
 
 	go d.Start()
 	defer d.Stop()
@@ -66,12 +72,47 @@ func TestShoudDispatchNotificationsToMultipleSubscribers(t *testing.T) {
 	verifyNotificationResponse(t, n2, notBefore, time.Now(), actualN2MonitorMsg)
 }
 
+func TestShouldDispatchNotificationsToSubscribersByType(t *testing.T) {
+	h := NewHistory(historySize)
+	d := NewDispatcher(delay, heartbeat, h)
+
+	m := NewMonitorSubscriber("192.168.1.2", contentTypeFilter)
+	s := NewStandardSubscriber("192.168.1.3", typeArticle)
+
+	go d.Start()
+	defer d.Stop()
+
+	d.Register(s)
+	d.Register(m)
+
+	notBefore := time.Now()
+	d.Send(n1, n2)
+
+	actualhbMessage := <-s.NotificationChannel()
+	assert.Equal(t, heartbeatMsg, actualhbMessage, "First message is a heartbeat")
+
+	actualN2StdMsg := <-s.NotificationChannel()
+	verifyNotificationResponse(t, n2, zeroTime, zeroTime, actualN2StdMsg)
+
+	anotherHbMsg := <-s.NotificationChannel()
+	assert.Equal(t, heartbeatMsg, anotherHbMsg, "Third message is a heartbeat")
+
+	actualhbMessage = <-m.NotificationChannel()
+	assert.Equal(t, heartbeatMsg, actualhbMessage, "First message is a heartbeat")
+
+	actualN1MonitorMsg := <-m.NotificationChannel()
+	verifyNotificationResponse(t, n1, notBefore, time.Now(), actualN1MonitorMsg)
+
+	actualN2MonitorMsg := <-m.NotificationChannel()
+	verifyNotificationResponse(t, n2, notBefore, time.Now(), actualN2MonitorMsg)
+}
+
 func TestAddAndDeleteOfSubscribers(t *testing.T) {
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)
 
-	m := NewMonitorSubscriber("192.168.1.2")
-	s := NewStandardSubscriber("192.168.1.3")
+	m := NewMonitorSubscriber("192.168.1.2", contentTypeFilter)
+	s := NewStandardSubscriber("192.168.1.3", contentTypeFilter)
 
 	go d.Start()
 	defer d.Stop()
@@ -107,7 +148,7 @@ func TestDispatchDelay(t *testing.T) {
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)
 
-	s := NewStandardSubscriber("192.168.1.3")
+	s := NewStandardSubscriber("192.168.1.3", contentTypeFilter)
 
 	go d.Start()
 	defer d.Stop()
@@ -138,7 +179,7 @@ func TestHeartbeat(t *testing.T) {
 	h := NewHistory(10)
 	d := NewDispatcher(delay, heartbeat, h)
 
-	s := NewStandardSubscriber("192.168.1.3")
+	s := NewStandardSubscriber("192.168.1.3", contentTypeFilter)
 
 	start := time.Now()
 	go d.Start()
@@ -167,7 +208,6 @@ func TestHeartbeat(t *testing.T) {
 	assert.InEpsilon(t, heartbeat.Nanoseconds(), actualHbDelay.Nanoseconds(), 0.05, "The third heartbeat delay is correct with 0.05 relative error")
 	assert.Equal(t, heartbeatMsg, actualHbMsg, "The fourth heartbeat message is correct")
 }
-
 func TestHeartbeatWithNotifications(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Heartbeat for long tests only.")
@@ -176,7 +216,7 @@ func TestHeartbeatWithNotifications(t *testing.T) {
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)
 
-	s := NewStandardSubscriber("192.168.1.3")
+	s := NewStandardSubscriber("192.168.1.3", contentTypeFilter)
 
 	start := time.Now()
 	go d.Start()
@@ -228,7 +268,6 @@ func TestHeartbeatWithNotifications(t *testing.T) {
 	assert.InEpsilon(t, randDuration2.Nanoseconds()+randDuration3.Nanoseconds()+heartbeat.Nanoseconds(), actualHbDelay.Nanoseconds(), 0.05, "The third heartbeat delay is correct with 0.05 relative error")
 	assert.Equal(t, heartbeatMsg, actualHbMsg, "The fourth heartbeat message is correct")
 }
-
 func TestDispatchedNotificationsInHistory(t *testing.T) {
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)
@@ -258,6 +297,7 @@ func TestDispatchedNotificationsInHistory(t *testing.T) {
 func verifyNotificationResponse(t *testing.T, expected Notification, notBefore time.Time, notAfter time.Time, actualMsg string) {
 	actualNotifications := []Notification{}
 	json.Unmarshal([]byte(actualMsg), &actualNotifications)
+	require.True(t, len(actualNotifications) > 0)
 	actual := actualNotifications[0]
 
 	verifyNotification(t, expected, notBefore, notAfter, actual)

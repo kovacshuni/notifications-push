@@ -8,16 +8,41 @@ import (
 
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	log "github.com/Sirupsen/logrus"
+	"fmt"
 )
 
+const (
+	apiKeyHeaderField  = "X-Api-Key"
+	apiKeyQueryParam   = "apiKey"
+	defaultContentType = "Article"
+)
+
+var supportedContentTypes = []string{"Article", "ContentPackage", "All"}
+
+//ApiKey is provided either as a request param or as a header.
+func getApiKey(r *http.Request) string {
+	apiKey := r.Header.Get(apiKeyHeaderField)
+	if apiKey != "" {
+		return apiKey
+	}
+
+	return r.URL.Query().Get(apiKeyQueryParam)
+}
+
 // Push handler for push subscribers
-func Push(reg dispatcher.Registrar) func(w http.ResponseWriter, r *http.Request) {
+func Push(reg dispatcher.Registrar, masheryApiKeyValidationURL string, httpClient *http.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-type", "text/event-stream")
+		w.Header().Set("Content-type", "text/event-stream; charset=UTF-8")
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Set("Connection", "keep-alive")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
+
+		apiKey := getApiKey(r)
+		if isValid, errMsg, errStatusCode := isValidApiKey(apiKey, masheryApiKeyValidationURL, httpClient); !isValid {
+			http.Error(w, errMsg, errStatusCode)
+			return
+		}
 
 		cn, ok := w.(http.CloseNotifier)
 		if !ok {
@@ -27,15 +52,21 @@ func Push(reg dispatcher.Registrar) func(w http.ResponseWriter, r *http.Request)
 
 		bw := bufio.NewWriter(w)
 
+		contentTypeParam, err := resolveContentType(r)
+		if err != nil {
+			log.WithError(err).Error("Invalid content type")
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		monitorParam := r.URL.Query().Get("monitor")
 		isMonitor, _ := strconv.ParseBool(monitorParam)
 
 		var s dispatcher.Subscriber
 
 		if isMonitor {
-			s = dispatcher.NewMonitorSubscriber(getClientAddr(r))
+			s = dispatcher.NewMonitorSubscriber(getClientAddr(r), contentTypeParam)
 		} else {
-			s = dispatcher.NewStandardSubscriber(getClientAddr(r))
+			s = dispatcher.NewStandardSubscriber(getClientAddr(r), contentTypeParam)
 		}
 
 		reg.Register(s)
@@ -72,4 +103,17 @@ func getClientAddr(r *http.Request) string {
 		return addr[0]
 	}
 	return r.RemoteAddr
+}
+
+func resolveContentType(r *http.Request) (string, error) {
+	contentType := r.URL.Query().Get("type")
+	if contentType == "" {
+		return defaultContentType, nil
+	}
+	for _, t := range supportedContentTypes {
+		if strings.ToLower(contentType) == strings.ToLower(t) {
+			return contentType, nil
+		}
+	}
+	return "", fmt.Errorf("The specified type (%s) is unsupported", contentType)
 }

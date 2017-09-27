@@ -1,22 +1,21 @@
 package main
 
 import (
+	"github.com/Financial-Times/kafka-client-go/kafka"
+	queueConsumer "github.com/Financial-Times/notifications-push/consumer"
+	"github.com/Financial-Times/service-status-go/httphandlers"
+	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
+	"github.com/jawher/mow.cli"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
-	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
-	"github.com/Financial-Times/service-status-go/httphandlers"
-	log "github.com/Sirupsen/logrus"
-	"github.com/gorilla/mux"
-	"github.com/jawher/mow.cli"
-
-	"github.com/Financial-Times/notifications-push/consumer"
+	"fmt"
 	"github.com/Financial-Times/notifications-push/dispatcher"
 	"github.com/Financial-Times/notifications-push/resources"
 )
@@ -24,8 +23,7 @@ import (
 const heartbeatPeriod = 30 * time.Second
 
 func init() {
-	f := &log.TextFormatter{
-		FullTimestamp:   true,
+	f := &log.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
 	}
 
@@ -41,10 +39,10 @@ func main() {
 		EnvVar: "NOTIFICATIONS_RESOURCE",
 	})
 	consumerAddrs := app.String(cli.StringOpt{
-		Name:   "consumer_proxy_addr",
+		Name:   "consumer_addr",
 		Value:  "",
-		Desc:   "Comma separated kafka proxy hosts for message consuming.",
-		EnvVar: "QUEUE_PROXY_ADDRS",
+		Desc:   "Comma separated kafka hosts for message consuming.",
+		EnvVar: "KAFKA_ADDRS",
 	})
 	consumerGroupID := app.String(cli.StringOpt{
 		Name:   "consumer_group_id",
@@ -52,35 +50,23 @@ func main() {
 		Desc:   "Kafka qroup id used for message consuming.",
 		EnvVar: "GROUP_ID",
 	})
-	consumerAutoCommitEnable := app.Bool(cli.BoolOpt{
-		Name:   "consumer_autocommit_enable",
-		Value:  true,
-		Desc:   "Enable autocommit for small messages.",
-		EnvVar: "CONSUMER_AUTOCOMMIT_ENABLE",
-	})
-	consumerAuthorizationKey := app.String(cli.StringOpt{
-		Name:   "consumer_authorization_key",
-		Value:  "",
-		Desc:   "The authorization key required to UCS access.",
-		EnvVar: "AUTHORIZATION_KEY",
-	})
 	apiBaseURL := app.String(cli.StringOpt{
 		Name:   "api_base_url",
 		Value:  "http://api.ft.com",
 		Desc:   "The API base URL where resources are accessible",
 		EnvVar: "API_BASE_URL",
 	})
+	apiKeyValidationEndpoint := app.String(cli.StringOpt{
+		Name:   "api_key_validation_endpoint",
+		Value:  "t800/a",
+		Desc:   "The Mashery ApiKey validation endpoint",
+		EnvVar: "API_KEY_VALIDATION_ENDPOINT",
+	})
 	topic := app.String(cli.StringOpt{
 		Name:   "topic",
 		Value:  "",
 		Desc:   "Kafka topic to read from.",
 		EnvVar: "TOPIC",
-	})
-	backoff := app.Int(cli.IntOpt{
-		Name:   "backoff",
-		Value:  4,
-		Desc:   "The backoff time for the queue gonsumer.",
-		EnvVar: "CONSUMER_BACKOFF",
 	})
 	port := app.Int(cli.IntOpt{
 		Name:   "port",
@@ -106,15 +92,19 @@ func main() {
 		EnvVar: "WHITELIST",
 	})
 
+	log.WithFields(log.Fields{
+		"KAFKA_TOPIC": *topic,
+		"GROUP_ID":    *consumerGroupID,
+		"KAFKA_ADDRS": *consumerAddrs,
+	}).Infof("[Startup] notifications-push is starting ")
+
 	app.Action = func() {
-		consumerConfig := queueConsumer.QueueConfig{
-			Addrs:            strings.Split(*consumerAddrs, ","),
-			Group:            *consumerGroupID,
-			Topic:            *topic,
-			AuthorizationKey: *consumerAuthorizationKey,
-			AutoCommitEnable: *consumerAutoCommitEnable,
-			BackoffPeriod:    *backoff,
+		consumerConfig := kafka.DefaultConsumerConfig()
+		messageConsumer, err := kafka.NewConsumer(*consumerAddrs, *consumerGroupID, []string{*topic}, consumerConfig)
+		if err != nil {
+			log.WithError(err).Fatal("Cannot create Kafka client")
 		}
+
 		httpClient := &http.Client{
 			Transport: &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
@@ -131,7 +121,7 @@ func main() {
 		history := dispatcher.NewHistory(*historySize)
 		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay)*time.Second, heartbeatPeriod, history)
 
-		mapper := consumer.NotificationMapper{
+		mapper := queueConsumer.NotificationMapper{
 			Resource:   *resource,
 			APIBaseURL: *apiBaseURL,
 		}
@@ -139,16 +129,14 @@ func main() {
 		whitelistR, err := regexp.Compile(*whitelist)
 		if err != nil {
 			log.WithError(err).Fatal("Whitelist regex MUST compile!")
-			return
 		}
 
-		queueHandler := consumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
-		messageConsumer := queueConsumer.NewBatchedConsumer(consumerConfig, queueHandler.HandleMessage, httpClient)
+		masheryAPIKeyValidationURL := fmt.Sprintf("%s/%s", *apiBaseURL, *apiKeyValidationEndpoint)
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, messageConsumer, masheryAPIKeyValidationURL, httpClient)
 
-		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, messageConsumer)
-
+		queueHandler := queueConsumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
 		pushService := newPushService(dispatcher, messageConsumer)
-		pushService.start()
+		pushService.start(queueHandler)
 	}
 
 	if err := app.Run(os.Args); err != nil {
@@ -156,12 +144,12 @@ func main() {
 	}
 }
 
-func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumer queueConsumer.MessageConsumer) {
+func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumer kafka.Consumer, masheryAPIKeyValidationURL string, httpClient *http.Client) {
 	notificationsPushPath := "/" + resource + "/notifications-push"
 
 	r := mux.NewRouter()
 
-	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher)).Methods("GET")
+	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher, masheryAPIKeyValidationURL, httpClient)).Methods("GET")
 	r.HandleFunc("/__history", resources.History(history)).Methods("GET")
 	r.HandleFunc("/__stats", resources.Stats(dispatcher)).Methods("GET")
 

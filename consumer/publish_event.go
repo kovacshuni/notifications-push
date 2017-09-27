@@ -5,12 +5,12 @@ import (
 	"regexp"
 	"strings"
 
-	queueConsumer "github.com/Financial-Times/message-queue-gonsumer/consumer"
+	"github.com/Financial-Times/kafka-client-go/kafka"
 )
 
 // NotificationQueueMessage is a wrapper for the queue consumer message type
 type NotificationQueueMessage struct {
-	queueConsumer.Message
+	kafka.FTMessage
 }
 
 // HasSynthTransactionID checks if the message is synthetic

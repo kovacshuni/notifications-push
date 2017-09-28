@@ -1,0 +1,11 @@
+# Values used for the deployed application.
+replicaCount: 2
+service:
+  name: notifications-push
+env:
+  GROUP_ID: "k8s-notifications-push"
+  TOPIC: "PostPublicationEvents"
+  CONSUMER_BACKOFF: "2"
+  NOTIFICATIONS_RESOURCE: "content"
+  WHITELIST: "^http://(methode|wordpress|content)-(article|collection|content-placeholder)-(transformer|mapper|unfolder)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$"
+  PUSH_PORT: "8599"

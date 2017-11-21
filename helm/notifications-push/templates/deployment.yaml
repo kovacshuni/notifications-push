@@ -34,7 +34,9 @@ spec:
               name: global-config
               key: api.host.with.protocol
         - name: GROUP_ID
-          value: {{ .Values.env.GROUP_ID }}
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         - name: TOPIC
           value: {{ .Values.env.TOPIC }}
         - name: NOTIFICATIONS_DELAY

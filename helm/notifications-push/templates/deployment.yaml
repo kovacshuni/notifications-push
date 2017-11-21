@@ -34,6 +34,7 @@ spec:
               name: global-config
               key: api.host.with.protocol
         - name: GROUP_ID
+          # set this as the pod name so it's unique per instance
           valueFrom:
             fieldRef:
               fieldPath: metadata.name

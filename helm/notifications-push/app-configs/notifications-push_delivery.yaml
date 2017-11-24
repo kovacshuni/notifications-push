@@ -3,7 +3,6 @@ replicaCount: 2
 service:
   name: notifications-push
 env:
-  GROUP_ID: "k8s-notifications-push"
   TOPIC: "PostPublicationEvents"
   CONSUMER_BACKOFF: "2"
   NOTIFICATIONS_RESOURCE: "content"

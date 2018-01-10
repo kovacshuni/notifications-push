@@ -2,11 +2,13 @@ package resources
 
 import (
 	"net/http"
+	"time"
+
+	"errors"
 
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	"github.com/Financial-Times/kafka-client-go/kafka"
 	"github.com/Financial-Times/service-status-go/gtg"
-	"errors"
 )
 
 type HealthCheck struct {
@@ -15,17 +17,20 @@ type HealthCheck struct {
 
 func NewHealthCheck(kafkaConsumer kafka.Consumer) *HealthCheck {
 	return &HealthCheck{
-Consumer: kafkaConsumer,
+		Consumer: kafkaConsumer,
 	}
 }
 
 func (h *HealthCheck) Health() func(w http.ResponseWriter, r *http.Request) {
 	checks := []fthealth.Check{h.queueCheck()}
-	hc := fthealth.HealthCheck{
-		SystemCode:  "upp-notifications-push",
-		Name:        "Notifications Push",
-		Description: "Checks if all the dependent services are reachable and healthy.",
-		Checks:      checks,
+	hc := fthealth.TimedHealthCheck{
+		HealthCheck: fthealth.HealthCheck{
+			SystemCode:  "upp-notifications-push",
+			Name:        "Notifications Push",
+			Description: "Checks if all the dependent services are reachable and healthy.",
+			Checks:      checks,
+		},
+		Timeout: 10 * time.Second,
 	}
 	return fthealth.Handler(hc)
 }
@@ -44,7 +49,7 @@ func (h *HealthCheck) queueCheck() fthealth.Check {
 }
 
 func (h *HealthCheck) GTG() gtg.Status {
-	if _,err := h.checkAggregateMessageQueueReachable(); err != nil {
+	if _, err := h.checkAggregateMessageQueueReachable(); err != nil {
 		return gtg.Status{GoodToGo: false, Message: err.Error()}
 	}
 	return gtg.Status{GoodToGo: true}

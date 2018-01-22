@@ -9,8 +9,10 @@ image:
   repository: coco/notifications-push
   pullPolicy: IfNotPresent
 resources:
+  requests:
+    memory: 100Mi
   limits:
-    memory: 256Mi
+    memory: 512Mi
 env:
   GROUP_ID: ""
   TOPIC: ""

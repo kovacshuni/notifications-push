@@ -148,6 +148,14 @@
 			"versionExact": "v1.0.4"
 		},
 		{
+			"checksumSHA1": "bEYPw3QRqpj0ID7Q2FAr0xnF1Xw=",
+			"path": "github.com/sirupsen/logrus/hooks/test",
+			"revision": "d682213848ed68c0a260ca37d6dd5ace8423f5ba",
+			"revisionTime": "2017-12-05T20:32:29Z",
+			"version": "v1.0.4",
+			"versionExact": "v1.0.4"
+		},
+		{
 			"checksumSHA1": "iDI3Ec9Co5dn9MAf6VRg5cGNRPI=",
 			"origin": "github.com/stretchr/testify/vendor/github.com/stretchr/objx",
 			"path": "github.com/stretchr/objx",

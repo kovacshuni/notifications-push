@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -73,6 +74,8 @@ func TestShouldDispatchNotificationsToMultipleSubscribers(t *testing.T) {
 }
 
 func TestShouldDispatchNotificationsToSubscribersByType(t *testing.T) {
+	hook := logTest.NewGlobal()
+
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)
 
@@ -105,6 +108,29 @@ func TestShouldDispatchNotificationsToSubscribersByType(t *testing.T) {
 
 	actualN2MonitorMsg := <-m.NotificationChannel()
 	verifyNotificationResponse(t, n2, notBefore, time.Now(), actualN2MonitorMsg)
+
+	for _, e := range hook.AllEntries() {
+		tid := e.Data["transaction_id"]
+		switch e.Message {
+		case "Skipping subscriber.":
+			assert.Equal(t, n1.APIURL, e.Data["resource"], "skipped resource")
+			assert.Equal(t, s.Address(), e.Data["subscriberAddress"], "skipped subscriber address")
+		case "Processed subscribers.":
+			switch tid {
+			case "tid_test1":
+				assert.Equal(t, 1, e.Data["sent"], "sent (%s)", tid)
+				assert.Equal(t, 0, e.Data["failed"], "failed (%s)", tid)
+				assert.Equal(t, 1, e.Data["skipped"], "skipped (%s)", tid)
+			case "tid_test2":
+				assert.Equal(t, 2, e.Data["sent"], "sent (%s)", tid)
+				assert.Equal(t, 0, e.Data["failed"], "failed (%s)", tid)
+				assert.Equal(t, 0, e.Data["skipped"], "skipped (%s)", tid)
+			default:
+				assert.Fail(t, "unexpected transaction_id", "%s (%s)", e.Message, tid)
+			}
+		default:
+		}
+	}
 }
 
 func TestAddAndDeleteOfSubscribers(t *testing.T) {

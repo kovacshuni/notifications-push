@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/Financial-Times/notifications-push/dispatcher"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"fmt"
 )
 

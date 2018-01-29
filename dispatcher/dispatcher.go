@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -73,22 +73,35 @@ func (d *dispatcher) Start() {
 func (d *dispatcher) forwardToSubscribers(notification Notification) {
 	d.lock.RLock()
 	defer d.lock.RUnlock()
+
+	var sent, failed, skipped int
+	defer func() {
+		log.WithFields(log.Fields{"transaction_id": notification.PublishReference, "resource": notification.APIURL, "sent": sent, "failed": failed, "skipped": skipped}).
+			Info("Processed subscribers.")
+	}()
+
 	for sub := range d.subscribers {
-		if !sub.matchesContentType(notification) {
-			continue
-		}
-		err := sub.send(notification)
 		entry := log.WithField("transaction_id", notification.PublishReference).
 			WithField("resource", notification.APIURL).
 			WithField("subscriberAddress", sub.Address()).
 			WithField("subscriberSince", sub.Since().Format(time.RFC3339))
-		if err != nil {
-			entry.WithError(err).Warn("Failed forwarding to subscriber.")
-		} else {
-			entry.Info("Forwarding to subscriber.")
+
+		if !sub.matchesContentType(notification) {
+			skipped++
+			entry.Info("Skipping subscriber.")
+			continue
 		}
 
+		err := sub.send(notification)
+		if err != nil {
+			failed++
+			entry.WithError(err).Warn("Failed forwarding to subscriber.")
+		} else {
+			sent++
+			entry.Info("Forwarding to subscriber.")
+		}
 	}
+
 	d.history.Push(notification)
 }
 

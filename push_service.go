@@ -9,7 +9,7 @@ import (
 	"github.com/Financial-Times/kafka-client-go/kafka"
 	cons "github.com/Financial-Times/notifications-push/consumer"
 	"github.com/Financial-Times/notifications-push/dispatcher"
-	log "github.com/sirupsen/logrus"
+	log "github.com/Financial-Times/go-logger"
 )
 
 type pushService struct {

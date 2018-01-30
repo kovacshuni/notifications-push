@@ -74,7 +74,7 @@ func TestShouldDispatchNotificationsToMultipleSubscribers(t *testing.T) {
 }
 
 func TestShouldDispatchNotificationsToSubscribersByType(t *testing.T) {
-	hook := logTest.NewGlobal()
+	hook := logTest.NewTestHook("notifications-push")
 
 	h := NewHistory(historySize)
 	d := NewDispatcher(delay, heartbeat, h)

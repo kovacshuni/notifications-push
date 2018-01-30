@@ -4,7 +4,7 @@ import (
 	"github.com/Financial-Times/kafka-client-go/kafka"
 	queueConsumer "github.com/Financial-Times/notifications-push/consumer"
 	"github.com/Financial-Times/service-status-go/httphandlers"
-	log "github.com/sirupsen/logrus"
+	log "github.com/Financial-Times/go-logger"
 	"github.com/gorilla/mux"
 	"github.com/jawher/mow.cli"
 	"net"
@@ -20,18 +20,13 @@ import (
 	"github.com/Financial-Times/notifications-push/resources"
 )
 
-const heartbeatPeriod = 30 * time.Second
-
-func init() {
-	f := &log.JSONFormatter{
-		TimestampFormat: time.RFC3339Nano,
-	}
-
-	log.SetFormatter(f)
-}
+const (
+	heartbeatPeriod = 30 * time.Second
+	serviceName = "notifications-push"
+)
 
 func main() {
-	app := cli.App("notifications-push", "Proactively notifies subscribers about new publishes/modifications.")
+	app := cli.App(serviceName, "Proactively notifies subscribers about new publishes/modifications.")
 	resource := app.String(cli.StringOpt{
 		Name:   "notifications_resource",
 		Value:  "",
@@ -92,7 +87,9 @@ func main() {
 		EnvVar: "WHITELIST",
 	})
 
-	log.WithFields(log.Fields{
+	log.InitLogger(serviceName, "info")
+
+	log.WithFields(map[string]interface{}{
 		"KAFKA_TOPIC": *topic,
 		"GROUP_ID":    *consumerGroupID,
 		"KAFKA_ADDRS": *consumerAddrs,

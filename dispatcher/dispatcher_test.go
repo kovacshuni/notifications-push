@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	logTest "github.com/sirupsen/logrus/hooks/test"
+	logTest "github.com/Financial-Times/go-logger/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

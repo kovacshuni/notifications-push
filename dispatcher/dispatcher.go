@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/Financial-Times/go-logger"
 )
 
 const (
@@ -76,7 +76,7 @@ func (d *dispatcher) forwardToSubscribers(notification Notification) {
 
 	var sent, failed, skipped int
 	defer func() {
-		log.WithFields(log.Fields{"transaction_id": notification.PublishReference, "resource": notification.APIURL, "sent": sent, "failed": failed, "skipped": skipped}).
+		log.WithFields(map[string]interface{}{"transaction_id": notification.PublishReference, "resource": notification.APIURL, "sent": sent, "failed": failed, "skipped": skipped}).
 			Info("Processed subscribers.")
 	}()
 

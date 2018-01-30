@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/Financial-Times/go-logger"
 )
 
 // Subscriber represents the interface of a generic subscriber to a push stream

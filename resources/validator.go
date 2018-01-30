@@ -1,7 +1,7 @@
 package resources
 
 import (
-	log "github.com/sirupsen/logrus"
+	log "github.com/Financial-Times/go-logger"
 	"io"
 	"io/ioutil"
 	"net/http"

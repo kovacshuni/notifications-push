@@ -5,7 +5,7 @@ import (
 
 	"github.com/Financial-Times/kafka-client-go/kafka"
 	"github.com/Financial-Times/notifications-push/dispatcher"
-	log "github.com/sirupsen/logrus"
+	log "github.com/Financial-Times/go-logger"
 )
 
 // MessageQueueHandler is a generic interface for implementation of components to hendle messages form the kafka queue.

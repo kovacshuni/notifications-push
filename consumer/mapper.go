@@ -4,7 +4,7 @@ import (
 	"errors"
 	"regexp"
 
-	"github.com/Financial-Times/notifications-push/dispatcher"
+	"github.com/Financial-Times/notifications-push/dispatch"
 )
 
 // NotificationMapper maps CmsPublicationEvents to Notifications
@@ -17,10 +17,10 @@ type NotificationMapper struct {
 var UUIDRegexp = regexp.MustCompile("[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}")
 
 // MapNotification maps the given event to a new notification.
-func (n NotificationMapper) MapNotification(event PublicationEvent, transactionID string) (dispatcher.Notification, error) {
+func (n NotificationMapper) MapNotification(event PublicationEvent, transactionID string) (dispatch.Notification, error) {
 	UUID := UUIDRegexp.FindString(event.ContentURI)
 	if UUID == "" {
-		return dispatcher.Notification{}, errors.New("ContentURI does not contain a UUID")
+		return dispatch.Notification{}, errors.New("ContentURI does not contain a UUID")
 	}
 
 	var eventType string
@@ -40,14 +40,14 @@ func (n NotificationMapper) MapNotification(event PublicationEvent, transactionI
 		}
 	}
 
-	return dispatcher.Notification{
+	return dispatch.Notification{
 		Type:             "http://www.ft.com/thing/ThingChangeType/" + eventType,
 		ID:               "http://www.ft.com/thing/" + UUID,
 		APIURL:           n.APIBaseURL + "/" + n.Resource + "/" + UUID,
 		PublishReference: transactionID,
 		LastModified:     event.LastModified,
 		Title:            title,
-		Standout:         dispatcher.Standout{Scoop: scoop},
+		Standout:         dispatch.Standout{Scoop: scoop},
 		ContentType:      contentType,
 	}, nil
 }

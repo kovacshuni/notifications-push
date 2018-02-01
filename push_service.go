@@ -6,18 +6,18 @@ import (
 	"sync"
 	"syscall"
 
+	log "github.com/Financial-Times/go-logger"
 	"github.com/Financial-Times/kafka-client-go/kafka"
 	cons "github.com/Financial-Times/notifications-push/consumer"
-	"github.com/Financial-Times/notifications-push/dispatcher"
-	log "github.com/Financial-Times/go-logger"
+	"github.com/Financial-Times/notifications-push/dispatch"
 )
 
 type pushService struct {
-	dispatcher dispatcher.Dispatcher
+	dispatcher dispatch.Dispatcher
 	consumer   kafka.Consumer
 }
 
-func newPushService(d dispatcher.Dispatcher, consumer kafka.Consumer) *pushService {
+func newPushService(d dispatch.Dispatcher, consumer kafka.Consumer) *pushService {
 	return &pushService{
 		dispatcher: d,
 		consumer:   consumer,

@@ -1,10 +1,10 @@
 package main
 
 import (
+	log "github.com/Financial-Times/go-logger"
 	"github.com/Financial-Times/kafka-client-go/kafka"
 	queueConsumer "github.com/Financial-Times/notifications-push/consumer"
 	"github.com/Financial-Times/service-status-go/httphandlers"
-	log "github.com/Financial-Times/go-logger"
 	"github.com/gorilla/mux"
 	"github.com/jawher/mow.cli"
 	"net"
@@ -16,13 +16,13 @@ import (
 	"time"
 
 	"fmt"
-	"github.com/Financial-Times/notifications-push/dispatcher"
+	"github.com/Financial-Times/notifications-push/dispatch"
 	"github.com/Financial-Times/notifications-push/resources"
 )
 
 const (
 	heartbeatPeriod = 30 * time.Second
-	serviceName = "notifications-push"
+	serviceName     = "notifications-push"
 )
 
 func main() {
@@ -96,8 +96,21 @@ func main() {
 	}).Infof("[Startup] notifications-push is starting ")
 
 	app.Action = func() {
+		errCh := make(chan error, 2)
+		go func() {
+			for err := range errCh {
+				//TODO examinate error and exit if error is critical
+				log.WithError(err).Error("Within notifications-push")
+			}
+		}()
 		consumerConfig := kafka.DefaultConsumerConfig()
-		messageConsumer, err := kafka.NewConsumer(*consumerAddrs, *consumerGroupID, []string{*topic}, consumerConfig)
+		messageConsumer, err := kafka.NewConsumer(kafka.Config{
+			ZookeeperConnectionString: *consumerAddrs,
+			ConsumerGroup:             *consumerGroupID,
+			Topics:                    []string{*topic},
+			ConsumerGroupConfig:       consumerConfig,
+			Err: errCh,
+		})
 		if err != nil {
 			log.WithError(err).Fatal("Cannot create Kafka client")
 		}
@@ -115,8 +128,8 @@ func main() {
 			},
 		}
 
-		history := dispatcher.NewHistory(*historySize)
-		dispatcher := dispatcher.NewDispatcher(time.Duration(*delay)*time.Second, heartbeatPeriod, history)
+		history := dispatch.NewHistory(*historySize)
+		dispatcher := dispatch.NewDispatcher(time.Duration(*delay)*time.Second, heartbeatPeriod, history)
 
 		mapper := queueConsumer.NotificationMapper{
 			Resource:   *resource,
@@ -141,7 +154,7 @@ func main() {
 	}
 }
 
-func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumer kafka.Consumer, masheryAPIKeyValidationURL string, httpClient *http.Client) {
+func server(listen string, resource string, dispatcher dispatch.Dispatcher, history dispatch.History, consumer kafka.Consumer, masheryAPIKeyValidationURL string, httpClient *http.Client) {
 	notificationsPushPath := "/" + resource + "/notifications-push"
 
 	r := mux.NewRouter()

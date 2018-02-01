@@ -3,9 +3,9 @@ package consumer
 import (
 	"regexp"
 
-	"github.com/Financial-Times/kafka-client-go/kafka"
-	"github.com/Financial-Times/notifications-push/dispatcher"
 	log "github.com/Financial-Times/go-logger"
+	"github.com/Financial-Times/kafka-client-go/kafka"
+	"github.com/Financial-Times/notifications-push/dispatch"
 )
 
 // MessageQueueHandler is a generic interface for implementation of components to hendle messages form the kafka queue.
@@ -16,11 +16,11 @@ type MessageQueueHandler interface {
 type simpleMessageQueueHandler struct {
 	whiteList  *regexp.Regexp
 	mapper     NotificationMapper
-	dispatcher dispatcher.Dispatcher
+	dispatcher dispatch.Dispatcher
 }
 
 // NewMessageQueueHandler returns a new message handler
-func NewMessageQueueHandler(whitelist *regexp.Regexp, mapper NotificationMapper, dispatcher dispatcher.Dispatcher) MessageQueueHandler {
+func NewMessageQueueHandler(whitelist *regexp.Regexp, mapper NotificationMapper, dispatcher dispatch.Dispatcher) MessageQueueHandler {
 	return &simpleMessageQueueHandler{
 		whiteList:  whitelist,
 		mapper:     mapper,

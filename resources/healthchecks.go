@@ -55,9 +55,9 @@ func (h *HealthCheck) GTG() gtg.Status {
 	return gtg.Status{GoodToGo: true}
 }
 
-func (hc *HealthCheck) checkAggregateMessageQueueReachable() (string, error) {
+func (h *HealthCheck) checkAggregateMessageQueueReachable() (string, error) {
 	// ISSUE: consumer's helthcheck always returns true
-	err := hc.Consumer.ConnectivityCheck()
+	err := h.Consumer.ConnectivityCheck()
 	if err == nil {
 		return "Connectivity to kafka is OK.", nil
 	}

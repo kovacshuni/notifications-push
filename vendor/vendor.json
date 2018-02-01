@@ -11,24 +11,22 @@
 			"versionExact": "0.4.0"
 		},
 		{
-			"checksumSHA1": "vEjWOjTbj1zDU4aNsl1u4J801Wg=",
+			"checksumSHA1": "+MP68SNVoei1j7UrsmeTt68RQoA=",
 			"path": "github.com/Financial-Times/go-logger",
 			"revision": "ec38b420999cfcbc86816afb47f365dad510450c",
 			"revisionTime": "2017-10-20T13:42:12Z"
 		},
 		{
-			"checksumSHA1": "eQJNFoxeNYlvXsrc762OCAmvXCE=",
+			"checksumSHA1": "IZSWcIapbmDO8RlrPVyrgjn91QI=",
 			"path": "github.com/Financial-Times/go-logger/test",
 			"revision": "ec38b420999cfcbc86816afb47f365dad510450c",
 			"revisionTime": "2017-10-20T13:42:12Z"
 		},
 		{
-			"checksumSHA1": "8xgl0z0fzjv0+/0JfFdl9W3UNmg=",
+			"checksumSHA1": "IjF2nm6q6Px43v/j/ipO53wqHbg=",
 			"path": "github.com/Financial-Times/kafka-client-go/kafka",
-			"revision": "af40f10479117e1832443ffcdf4e4af6d802e92e",
-			"revisionTime": "2018-01-24T17:42:14Z",
-			"version": "0.7.0",
-			"versionExact": "0.7.0"
+			"revision": "23ddf1998f2e9b42691ec447811ef12bd3dbe5ca",
+			"revisionTime": "2018-02-01T13:20:36Z"
 		},
 		{
 			"checksumSHA1": "v+iZMRghLJr+LHe8ihEViOFE+9g=",

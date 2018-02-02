@@ -102,6 +102,7 @@ func main() {
 
 	app.Action = func() {
 		errCh := make(chan error, 2)
+		defer close(errCh)
 		go func() {
 			for err := range errCh {
 				for _, fatalErr := range fatalErrs {

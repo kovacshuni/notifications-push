@@ -18,12 +18,17 @@ import (
 	"fmt"
 	"github.com/Financial-Times/notifications-push/dispatch"
 	"github.com/Financial-Times/notifications-push/resources"
+	"github.com/wvanbergen/kazoo-go"
+	"strings"
+	"github.com/samuel/go-zookeeper/zk"
 )
 
 const (
 	heartbeatPeriod = 30 * time.Second
 	serviceName     = "notifications-push"
 )
+
+var fatalErrs = []error{kazoo.ErrPartitionNotClaimed, zk.ErrNoServer}
 
 func main() {
 	app := cli.App(serviceName, "Proactively notifies subscribers about new publishes/modifications.")
@@ -99,8 +104,11 @@ func main() {
 		errCh := make(chan error, 2)
 		go func() {
 			for err := range errCh {
-				//TODO examinate error and exit if error is critical
-				log.WithError(err).Error("Within notifications-push")
+				for _, fatalErr := range fatalErrs {
+					if strings.Contains(err.Error(), fatalErr.Error()) {
+						log.WithError(err).Fatalf("Exiting %s due to fatal error", serviceName)
+					}
+				}
 			}
 		}()
 		consumerConfig := kafka.DefaultConsumerConfig()
@@ -109,7 +117,7 @@ func main() {
 			ConsumerGroup:             *consumerGroupID,
 			Topics:                    []string{*topic},
 			ConsumerGroupConfig:       consumerConfig,
-			Err: errCh,
+			Err:                       errCh,
 		})
 		if err != nil {
 			log.WithError(err).Fatal("Cannot create Kafka client")

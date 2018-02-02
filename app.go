@@ -59,7 +59,7 @@ func main() {
 	apiKeyValidationEndpoint := app.String(cli.StringOpt{
 		Name:   "api_key_validation_endpoint",
 		Value:  "t800/a",
-		Desc:   "The Mashery ApiKey validation endpoint",
+		Desc:   "The Api Gateway ApiKey validation endpoint",
 		EnvVar: "API_KEY_VALIDATION_ENDPOINT",
 	})
 	topic := app.String(cli.StringOpt{
@@ -149,8 +149,8 @@ func main() {
 			log.WithError(err).Fatal("Whitelist regex MUST compile!")
 		}
 
-		masheryAPIKeyValidationURL := fmt.Sprintf("%s/%s", *apiBaseURL, *apiKeyValidationEndpoint)
-		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, messageConsumer, masheryAPIKeyValidationURL, httpClient)
+		apiGatewayAPIKeyValidationURL := fmt.Sprintf("%s/%s", *apiBaseURL, *apiKeyValidationEndpoint)
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, messageConsumer, apiGatewayAPIKeyValidationURL, httpClient)
 
 		queueHandler := queueConsumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
 		pushService := newPushService(dispatcher, messageConsumer)
@@ -162,12 +162,12 @@ func main() {
 	}
 }
 
-func server(listen string, resource string, dispatcher dispatch.Dispatcher, history dispatch.History, consumer kafka.Consumer, masheryAPIKeyValidationURL string, httpClient *http.Client) {
+func server(listen string, resource string, dispatcher dispatch.Dispatcher, history dispatch.History, consumer kafka.Consumer, apiGatewayAPIKeyValidationURL string, httpClient *http.Client) {
 	notificationsPushPath := "/" + resource + "/notifications-push"
 
 	r := mux.NewRouter()
 
-	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher, masheryAPIKeyValidationURL, httpClient)).Methods("GET")
+	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher, apiGatewayAPIKeyValidationURL, httpClient)).Methods("GET")
 	r.HandleFunc("/__history", resources.History(history)).Methods("GET")
 	r.HandleFunc("/__stats", resources.Stats(dispatcher)).Methods("GET")
 

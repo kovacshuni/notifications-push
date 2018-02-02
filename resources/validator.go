@@ -7,14 +7,14 @@ import (
 	"net/http"
 )
 
-func isValidApiKey(providedApiKey string, masheryApiKeyValidationURL string, httpClient *http.Client) (bool, string, int) {
+func isValidApiKey(providedApiKey string, apiGatewayApiKeyValidationURL string, httpClient *http.Client) (bool, string, int) {
 	if providedApiKey == "" {
 		return false, "Empty api key", http.StatusUnauthorized
 	}
 
-	req, err := http.NewRequest("GET", masheryApiKeyValidationURL, nil)
+	req, err := http.NewRequest("GET", apiGatewayApiKeyValidationURL, nil)
 	if err != nil {
-		log.WithField("url", masheryApiKeyValidationURL).WithError(err).Error("Invalid URL for api key validation")
+		log.WithField("url", apiGatewayApiKeyValidationURL).WithError(err).Error("Invalid URL for api key validation")
 		return false, "Invalid URL", http.StatusInternalServerError
 	}
 
@@ -22,11 +22,9 @@ func isValidApiKey(providedApiKey string, masheryApiKeyValidationURL string, htt
 
 	//if the api key has more than 8 characters we want to log the first and last four
 	apiKeyFirstChars := ""
-	if len(providedApiKey) > 8 {
-		apiKeyFirstChars = providedApiKey[:4]
-	}
 	apiKeyLastChars := ""
 	if len(providedApiKey) > 8 {
+		apiKeyFirstChars = providedApiKey[:4]
 		apiKeyLastChars = providedApiKey[len(providedApiKey)-4:]
 	}
 	log.WithField("url", req.URL.String()).WithField("apiKeyFirstChars", apiKeyFirstChars).WithField("apiKeyLastChars", apiKeyLastChars).Info("Calling Api Gateway to validate api key")

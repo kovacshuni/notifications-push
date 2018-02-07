@@ -22,8 +22,8 @@ var start func(sub dispatch.Subscriber)
 func TestPushStandardSubscriber(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -66,8 +66,8 @@ func TestPushStandardSubscriber(t *testing.T) {
 func TestPushMonitorSubscriber(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.monitorSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.monitorSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.monitorSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.monitorSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push?monitor=true", nil)
@@ -125,8 +125,8 @@ func TestPushFailed(t *testing.T) {
 
 func TestPushInvalidType(t *testing.T) {
 	d := new(MockDispatcher)
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push?type=InvalidType", nil)
@@ -162,8 +162,8 @@ func TestPushInvalidType(t *testing.T) {
 func TestApiGatewayDown(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -193,8 +193,8 @@ func TestApiGatewayDown(t *testing.T) {
 func TestInvalidApiKey(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -224,8 +224,8 @@ func TestInvalidApiKey(t *testing.T) {
 func TestEmptyApiKey(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -253,8 +253,8 @@ func TestEmptyApiKey(t *testing.T) {
 func TestInvalidUrlForValidatingApiKey(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -282,8 +282,8 @@ func TestInvalidUrlForValidatingApiKey(t *testing.T) {
 func TestClientErrorByRequestingValidatingApiKey(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)

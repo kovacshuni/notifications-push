@@ -19,7 +19,6 @@ import (
 	"github.com/Financial-Times/notifications-push/dispatch"
 	"github.com/Financial-Times/notifications-push/resources"
 	"github.com/wvanbergen/kazoo-go"
-	"strings"
 	"github.com/samuel/go-zookeeper/zk"
 )
 
@@ -27,8 +26,6 @@ const (
 	heartbeatPeriod = 30 * time.Second
 	serviceName     = "notifications-push"
 )
-
-var fatalErrs = []error{kazoo.ErrPartitionNotClaimed, zk.ErrNoServer}
 
 func main() {
 	app := cli.App(serviceName, "Proactively notifies subscribers about new publishes/modifications.")
@@ -103,15 +100,14 @@ func main() {
 	app.Action = func() {
 		errCh := make(chan error, 2)
 		defer close(errCh)
-		go func() {
-			for err := range errCh {
-				for _, fatalErr := range fatalErrs {
-					if strings.Contains(err.Error(), fatalErr.Error()) {
-						log.WithError(err).Fatalf("Exiting %s due to fatal error", serviceName)
-					}
-				}
-			}
-		}()
+		var fatalErrs = []error{kazoo.ErrPartitionNotClaimed, zk.ErrNoServer}
+		fatalErrHandler := func(err error, serviceName string) {
+			log.WithError(err).Fatalf("Exiting %s due to fatal error", serviceName)
+		}
+
+		supervisor := newServiceSupervisor(serviceName, errCh, fatalErrs, fatalErrHandler)
+		go supervisor.Supervise()
+
 		consumerConfig := kafka.DefaultConsumerConfig()
 		messageConsumer, err := kafka.NewConsumer(kafka.Config{
 			ZookeeperConnectionString: *consumerAddrs,

@@ -7,14 +7,14 @@ import (
 	"net/http"
 )
 
-func isValidApiKey(providedApiKey string, masheryApiKeyValidationURL string, httpClient *http.Client) (bool, string, int) {
+func isValidApiKey(providedApiKey string, apiGatewayKeyValidationURL string, httpClient *http.Client) (bool, string, int) {
 	if providedApiKey == "" {
 		return false, "Empty api key", http.StatusUnauthorized
 	}
 
-	req, err := http.NewRequest("GET", masheryApiKeyValidationURL, nil)
+	req, err := http.NewRequest("GET", apiGatewayKeyValidationURL, nil)
 	if err != nil {
-		log.WithField("url", masheryApiKeyValidationURL).WithError(err).Error("Invalid URL for api key validation")
+		log.WithField("url", apiGatewayKeyValidationURL).WithError(err).Error("Invalid URL for api key validation")
 		return false, "Invalid URL", http.StatusInternalServerError
 	}
 
@@ -25,11 +25,11 @@ func isValidApiKey(providedApiKey string, masheryApiKeyValidationURL string, htt
 	if len(providedApiKey) > 5 {
 		keySuffix = providedApiKey[len(providedApiKey)-5:]
 	}
-	log.WithField("url", req.URL.String()).WithField("keySuffix", keySuffix).Info("Calling Mashery to validate api key")
+	log.WithField("url", req.URL.String()).WithField("keySuffix", keySuffix).Info("Calling the API Gateway to validate api key")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		log.WithField("url", req.URL.String()).WithError(err).Error("Cannot send request to Mashery")
+		log.WithField("url", req.URL.String()).WithError(err).Error("Cannot send request to the API Gateway")
 		return false, "Request to validate api key failed", http.StatusInternalServerError
 	}
 	defer func() {
@@ -47,6 +47,6 @@ func isValidApiKey(providedApiKey string, masheryApiKeyValidationURL string, htt
 		return false, "Invalid api key", http.StatusUnauthorized
 	}
 
-	log.WithField("url", req.URL.String()).Errorf("Received unexpected status code from Mashery: %d", respStatusCode)
+	log.WithField("url", req.URL.String()).Errorf("Received unexpected status code from the API Gateway: %d", respStatusCode)
 	return false, "Request to validate api key returned an unexpected response", http.StatusServiceUnavailable
 }

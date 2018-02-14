@@ -47,6 +47,16 @@ func isValidApiKey(providedApiKey string, apiGatewayKeyValidationURL string, htt
 		return false, "Invalid api key", http.StatusUnauthorized
 	}
 
+	if respStatusCode == http.StatusTooManyRequests {
+		log.WithField("keySuffix", keySuffix).Error("API key rate limit exceeded.")
+		return false, "Rate limit exceeded", http.StatusTooManyRequests
+	}
+
+	if respStatusCode == http.StatusForbidden {
+		log.WithField("keySuffix", keySuffix).Error("Operation forbidden.")
+		return false, "Operation forbidden", http.StatusForbidden
+	}
+
 	log.WithField("url", req.URL.String()).Errorf("Received unexpected status code from the API Gateway: %d", respStatusCode)
 	return false, "Request to validate api key returned an unexpected response", http.StatusServiceUnavailable
 }

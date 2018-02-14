@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"errors"
-	"io/ioutil"
 	"strings"
 
 	"github.com/Financial-Times/notifications-push/dispatcher"
@@ -43,9 +41,7 @@ func TestPushStandardSubscriber(t *testing.T) {
 		assert.Equal(t, "some-host", sub.Address())
 	}
 
-	httpClient := initializeMockHTTPClient(&mockTransport{
-		responseStatusCode: http.StatusOK,
-	})
+	httpClient := mocks.MockHTTPClientWithResponseCode(http.StatusOK)
 	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 
 	assert.Equal(t, "text/event-stream; charset=UTF-8", w.Header().Get("Content-Type"), "Should be SSE")
@@ -87,9 +83,7 @@ func TestPushMonitorSubscriber(t *testing.T) {
 		assert.Equal(t, "some-host", sub.Address())
 	}
 
-	httpClient := initializeMockHTTPClient(&mockTransport{
-		responseStatusCode: http.StatusOK,
-	})
+	httpClient := mocks.MockHTTPClientWithResponseCode(http.StatusOK)
 	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 
 	assert.Equal(t, "text/event-stream; charset=UTF-8", w.Header().Get("Content-Type"), "Should be SSE")
@@ -116,9 +110,7 @@ func TestPushFailed(t *testing.T) {
 	}
 	req.Header.Set(apiKeyHeaderField, "some-api-key")
 
-	httpClient := initializeMockHTTPClient(&mockTransport{
-		responseStatusCode: http.StatusOK,
-	})
+	httpClient := mocks.MockHTTPClientWithResponseCode(http.StatusOK)
 	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
@@ -146,9 +138,7 @@ func TestPushInvalidType(t *testing.T) {
 		assert.Equal(t, "some-host", sub.Address())
 	}
 
-	httpClient := initializeMockHTTPClient(&mockTransport{
-		responseStatusCode: http.StatusOK,
-	})
+	httpClient := mocks.MockHTTPClientWithResponseCode(http.StatusOK)
 	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -183,9 +173,7 @@ func TestAPIGatewayDown(t *testing.T) {
 		assert.Equal(t, "some-host", sub.Address())
 	}
 
-	httpClient := initializeMockHTTPClient(&mockTransport{
-		responseStatusCode: http.StatusInternalServerError,
-	})
+	httpClient := mocks.MockHTTPClientWithResponseCode(http.StatusInternalServerError)
 	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 }
@@ -214,9 +202,7 @@ func TestInvalidApiKey(t *testing.T) {
 		assert.Equal(t, "some-host", sub.Address())
 	}
 
-	httpClient := initializeMockHTTPClient(&mockTransport{
-		responseStatusCode: http.StatusUnauthorized,
-	})
+	httpClient := mocks.MockHTTPClientWithResponseCode(http.StatusUnauthorized)
 	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
@@ -245,7 +231,7 @@ func TestEmptyApiKey(t *testing.T) {
 		assert.Equal(t, "some-host", sub.Address())
 	}
 
-	httpClient := initializeMockHTTPClient(&mockTransport{})
+	httpClient := mocks.DefaultMockHTTPClient()
 	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
@@ -274,7 +260,7 @@ func TestInvalidUrlForValidatingApiKey(t *testing.T) {
 		assert.Equal(t, "some-host", sub.Address())
 	}
 
-	httpClient := initializeMockHTTPClient(&mockTransport{})
+	httpClient := mocks.DefaultMockHTTPClient()
 	Push(d, ":invalidurl", httpClient)(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
@@ -303,10 +289,7 @@ func TestClientErrorByRequestingValidatingApiKey(t *testing.T) {
 		assert.Equal(t, "some-host", sub.Address())
 	}
 
-	httpClient := initializeMockHTTPClient(&mockTransport{
-		shouldReturnError: true,
-	})
-
+	httpClient := mocks.ErroringMockHTTPClient()
 	Push(d, "http://dummy.ft.com", httpClient)(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
@@ -333,33 +316,4 @@ type StreamResponseRecorder struct {
 
 func (r *StreamResponseRecorder) CloseNotify() <-chan bool {
 	return r.closer
-}
-
-type MockWebClient struct{}
-type mockTransport struct {
-	responseStatusCode int
-	responseBody       string
-	shouldReturnError  bool
-}
-
-func initializeMockHTTPClient(tr *mockTransport) *http.Client {
-	client := http.DefaultClient
-	client.Transport = tr
-	return client
-}
-
-func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	response := &http.Response{
-		Header:     make(http.Header),
-		Request:    req,
-		StatusCode: t.responseStatusCode,
-	}
-
-	response.Header.Set("Content-Type", "application/json")
-	response.Body = ioutil.NopCloser(strings.NewReader(t.responseBody))
-
-	if t.shouldReturnError {
-		return nil, errors.New("Client error")
-	}
-	return response, nil
 }

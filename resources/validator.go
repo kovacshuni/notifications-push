@@ -20,12 +20,12 @@ func isValidApiKey(providedApiKey string, masheryApiKeyValidationURL string, htt
 
 	req.Header.Set(apiKeyHeaderField, providedApiKey)
 
-	//if the api key has more than four characters we want to log the first four
-	apiKeyFirstChars := ""
-	if len(providedApiKey) > 4 {
-		apiKeyFirstChars = providedApiKey[0:4]
+	//if the api key has more than five characters we want to log the last five
+	keySuffix := ""
+	if len(providedApiKey) > 5 {
+		keySuffix = providedApiKey[len(providedApiKey)-5:]
 	}
-	log.WithField("url", req.URL.String()).WithField("apiKeyFirstChars", apiKeyFirstChars).Info("Calling Mashery to validate api key")
+	log.WithField("url", req.URL.String()).WithField("keySuffix", keySuffix).Info("Calling Mashery to validate api key")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -43,7 +43,7 @@ func isValidApiKey(providedApiKey string, masheryApiKeyValidationURL string, htt
 	}
 
 	if respStatusCode == http.StatusUnauthorized {
-		log.WithField("apiKeyFirstChars", apiKeyFirstChars).Error("Invalid api key")
+		log.WithField("keySuffix", keySuffix).Error("Invalid api key")
 		return false, "Invalid api key", http.StatusUnauthorized
 	}
 

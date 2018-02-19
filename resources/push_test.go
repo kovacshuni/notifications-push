@@ -159,7 +159,7 @@ func TestPushInvalidType(t *testing.T) {
 	assert.True(t, strings.Contains(body, "The specified type (InvalidType) is unsupported"))
 }
 
-func TestApiGatewayDown(t *testing.T) {
+func TestMasheryDown(t *testing.T) {
 	d := new(MockDispatcher)
 
 	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()

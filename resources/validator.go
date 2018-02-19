@@ -25,11 +25,11 @@ func isValidApiKey(providedApiKey string, apiGatewayKeyValidationURL string, htt
 	if len(providedApiKey) > 5 {
 		keySuffix = providedApiKey[len(providedApiKey)-5:]
 	}
-	log.WithField("url", req.URL.String()).WithField("keySuffix", keySuffix).Info("Calling the API Gateway to validate api key")
+	log.WithField("url", req.URL.String()).WithField("apiKeyLastChars", keySuffix).Info("Calling the API Gateway to validate api key")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		log.WithField("url", req.URL.String()).WithError(err).Error("Cannot send request to the API Gateway")
+		log.WithField("url", req.URL.String()).WithField("apiKeyLastChars", keySuffix).WithError(err).Error("Cannot send request to the API Gateway")
 		return false, "Request to validate api key failed", http.StatusInternalServerError
 	}
 	defer func() {
@@ -43,20 +43,20 @@ func isValidApiKey(providedApiKey string, apiGatewayKeyValidationURL string, htt
 	}
 
 	if respStatusCode == http.StatusUnauthorized {
-		log.WithField("keySuffix", keySuffix).Error("Invalid api key")
+		log.WithField("apiKeyLastChars", keySuffix).Error("Invalid api key")
 		return false, "Invalid api key", http.StatusUnauthorized
 	}
 
 	if respStatusCode == http.StatusTooManyRequests {
-		log.WithField("keySuffix", keySuffix).Error("API key rate limit exceeded.")
+		log.WithField("apiKeyLastChars", keySuffix).Error("API key rate limit exceeded.")
 		return false, "Rate limit exceeded", http.StatusTooManyRequests
 	}
 
 	if respStatusCode == http.StatusForbidden {
-		log.WithField("keySuffix", keySuffix).Error("Operation forbidden.")
+		log.WithField("apiKeyLastChars", keySuffix).Error("Operation forbidden.")
 		return false, "Operation forbidden", http.StatusForbidden
 	}
-
-	log.WithField("url", req.URL.String()).Errorf("Received unexpected status code from the API Gateway: %d", respStatusCode)
-	return false, "Request to validate api key returned an unexpected response", http.StatusServiceUnavailable
+	
+	log.WithField("url", req.URL.String()).WithField("apiKeyLastChars", keySuffix).Errorf("Received unexpected status code from the API Gateway: %d", respStatusCode)
+	return false, "Request to validate api key returned an unexpected response", respStatusCode
 }

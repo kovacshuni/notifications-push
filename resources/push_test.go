@@ -175,7 +175,7 @@ func TestAPIGatewayDown(t *testing.T) {
 
 	httpClient := mocks.MockHTTPClientWithResponseCode(http.StatusInternalServerError)
 	Push(d, "http://dummy.ft.com", httpClient)(w, req)
-	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
 func TestInvalidApiKey(t *testing.T) {

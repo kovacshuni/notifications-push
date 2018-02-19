@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"encoding/json"
 )
 
 func isValidApiKey(providedApiKey string, apiGatewayKeyValidationURL string, httpClient *http.Client) (bool, string, int) {
@@ -42,21 +43,42 @@ func isValidApiKey(providedApiKey string, apiGatewayKeyValidationURL string, htt
 		return true, "", 0
 	}
 
+	responseBody := getResponseBody(resp, keySuffix)
+
 	if respStatusCode == http.StatusUnauthorized {
-		log.WithField("apiKeyLastChars", keySuffix).Error("Invalid api key")
+		log.WithField("apiKeyLastChars", keySuffix).Errorf("Invalid api key: %v", responseBody)
 		return false, "Invalid api key", http.StatusUnauthorized
 	}
 
 	if respStatusCode == http.StatusTooManyRequests {
-		log.WithField("apiKeyLastChars", keySuffix).Error("API key rate limit exceeded.")
+		log.WithField("apiKeyLastChars", keySuffix).Errorf("API key rate limit exceeded: %v", responseBody)
 		return false, "Rate limit exceeded", http.StatusTooManyRequests
 	}
 
 	if respStatusCode == http.StatusForbidden {
-		log.WithField("apiKeyLastChars", keySuffix).Error("Operation forbidden.")
+		log.WithField("apiKeyLastChars", keySuffix).Errorf("Operation forbidden: %v", responseBody)
 		return false, "Operation forbidden", http.StatusForbidden
 	}
-	
-	log.WithField("url", req.URL.String()).WithField("apiKeyLastChars", keySuffix).Errorf("Received unexpected status code from the API Gateway: %d", respStatusCode)
+
+	log.WithField("url", req.URL.String()).WithField("apiKeyLastChars", keySuffix).Errorf("Received unexpected status code from the API Gateway: %d, error message: %v", respStatusCode, responseBody)
 	return false, "Request to validate api key returned an unexpected response", respStatusCode
+}
+
+func getResponseBody(resp *http.Response, keySuffix string) string {
+	type ApiMessage struct {
+		Error string `json:"error"`
+	}
+	msg := ApiMessage{}
+	responseBodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.WithField("apiKeyLastChars", keySuffix).Warnf("Getting API Gateway response body failed: %v", err)
+		return ""
+	}
+
+	err = json.Unmarshal(responseBodyBytes, &msg)
+	if err != nil {
+		log.WithField("apiKeyLastChars", keySuffix).Warnf("Decoding API Gateway response body as json failed: %v", err)
+		return string(responseBodyBytes[:])
+	}
+	return msg.Error
 }

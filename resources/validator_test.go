@@ -87,3 +87,4 @@ func TestIsValidApiKeyResponseOtherServerError(t *testing.T) {
 	assert.Equal(t, "Request to validate api key returned an unexpected response", errMsg)
 	assert.Equal(t, http.StatusGatewayTimeout, errStatusCode)
 }
+

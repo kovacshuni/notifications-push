@@ -20,12 +20,11 @@ func isValidApiKey(providedApiKey string, masheryApiKeyValidationURL string, htt
 
 	req.Header.Set(apiKeyHeaderField, providedApiKey)
 
-	//if the api key has more than 8 characters we want to log the first and last four
 	apiKeyFirstChars := ""
 	if len(providedApiKey) > 4 {
 		apiKeyFirstChars = providedApiKey[0:4]
 	}
-	log.WithField("url", req.URL.String()).WithField("apiKeyFirstChars", apiKeyFirstChars).Info("Calling Api Gateway to validate api key")
+	log.WithField("url", req.URL.String()).WithField("apiKeyFirstChars", apiKeyFirstChars).Info("Calling Mashery to validate api key")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {

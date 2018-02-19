@@ -22,7 +22,7 @@ import (
 
 const (
 	heartbeatPeriod = 30 * time.Second
-	serviceName = "notifications-push"
+	serviceName     = "notifications-push"
 )
 
 func main() {
@@ -54,7 +54,7 @@ func main() {
 	apiKeyValidationEndpoint := app.String(cli.StringOpt{
 		Name:   "api_key_validation_endpoint",
 		Value:  "t800/a",
-		Desc:   "The Mashery ApiKey validation endpoint",
+		Desc:   "The API Gateway ApiKey validation endpoint",
 		EnvVar: "API_KEY_VALIDATION_ENDPOINT",
 	})
 	topic := app.String(cli.StringOpt{
@@ -128,8 +128,8 @@ func main() {
 			log.WithError(err).Fatal("Whitelist regex MUST compile!")
 		}
 
-		masheryAPIKeyValidationURL := fmt.Sprintf("%s/%s", *apiBaseURL, *apiKeyValidationEndpoint)
-		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, messageConsumer, masheryAPIKeyValidationURL, httpClient)
+		apiGatewayKeyValidationURL := fmt.Sprintf("%s/%s", *apiBaseURL, *apiKeyValidationEndpoint)
+		go server(":"+strconv.Itoa(*port), *resource, dispatcher, history, messageConsumer, apiGatewayKeyValidationURL, httpClient)
 
 		queueHandler := queueConsumer.NewMessageQueueHandler(whitelistR, mapper, dispatcher)
 		pushService := newPushService(dispatcher, messageConsumer)
@@ -141,12 +141,12 @@ func main() {
 	}
 }
 
-func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumer kafka.Consumer, masheryAPIKeyValidationURL string, httpClient *http.Client) {
+func server(listen string, resource string, dispatcher dispatcher.Dispatcher, history dispatcher.History, consumer kafka.Consumer, apiGatewayKeyValidationURL string, httpClient *http.Client) {
 	notificationsPushPath := "/" + resource + "/notifications-push"
 
 	r := mux.NewRouter()
 
-	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher, masheryAPIKeyValidationURL, httpClient)).Methods("GET")
+	r.HandleFunc(notificationsPushPath, resources.Push(dispatcher, apiGatewayKeyValidationURL, httpClient)).Methods("GET")
 	r.HandleFunc("/__history", resources.History(history)).Methods("GET")
 	r.HandleFunc("/__stats", resources.Stats(dispatcher)).Methods("GET")
 

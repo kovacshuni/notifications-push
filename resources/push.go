@@ -30,7 +30,7 @@ func getApiKey(r *http.Request) string {
 }
 
 // Push handler for push subscribers
-func Push(reg dispatch.Registrar, masheryApiKeyValidationURL string, httpClient *http.Client) func(w http.ResponseWriter, r *http.Request) {
+func Push(reg dispatch.Registrar, apiGatewayKeyValidationURL string, httpClient *http.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-type", "text/event-stream; charset=UTF-8")
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -39,7 +39,7 @@ func Push(reg dispatch.Registrar, masheryApiKeyValidationURL string, httpClient 
 		w.Header().Set("Expires", "0")
 
 		apiKey := getApiKey(r)
-		if isValid, errMsg, errStatusCode := isValidApiKey(apiKey, masheryApiKeyValidationURL, httpClient); !isValid {
+		if isValid, errMsg, errStatusCode := isValidApiKey(apiKey, apiGatewayKeyValidationURL, httpClient); !isValid {
 			http.Error(w, errMsg, errStatusCode)
 			return
 		}

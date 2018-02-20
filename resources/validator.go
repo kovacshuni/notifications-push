@@ -5,30 +5,32 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"encoding/json"
 )
 
-func isValidApiKey(providedApiKey string, masheryApiKeyValidationURL string, httpClient *http.Client) (bool, string, int) {
+func isValidApiKey(providedApiKey string, apiGatewayKeyValidationURL string, httpClient *http.Client) (bool, string, int) {
 	if providedApiKey == "" {
 		return false, "Empty api key", http.StatusUnauthorized
 	}
 
-	req, err := http.NewRequest("GET", masheryApiKeyValidationURL, nil)
+	req, err := http.NewRequest("GET", apiGatewayKeyValidationURL, nil)
 	if err != nil {
-		log.WithField("url", masheryApiKeyValidationURL).WithError(err).Error("Invalid URL for api key validation")
+		log.WithField("url", apiGatewayKeyValidationURL).WithError(err).Error("Invalid URL for api key validation")
 		return false, "Invalid URL", http.StatusInternalServerError
 	}
 
 	req.Header.Set(apiKeyHeaderField, providedApiKey)
 
-	apiKeyFirstChars := ""
-	if len(providedApiKey) > 4 {
-		apiKeyFirstChars = providedApiKey[0:4]
+	//if the api key has more than five characters we want to log the last five
+	keySuffix := ""
+	if len(providedApiKey) > 5 {
+		keySuffix = providedApiKey[len(providedApiKey)-5:]
 	}
-	log.WithField("url", req.URL.String()).WithField("apiKeyFirstChars", apiKeyFirstChars).Info("Calling Mashery to validate api key")
+	log.WithField("url", req.URL.String()).WithField("apiKeyLastChars", keySuffix).Info("Calling the API Gateway to validate api key")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		log.WithField("url", req.URL.String()).WithError(err).Error("Cannot send request to Mashery")
+		log.WithField("url", req.URL.String()).WithField("apiKeyLastChars", keySuffix).WithError(err).Error("Cannot send request to the API Gateway")
 		return false, "Request to validate api key failed", http.StatusInternalServerError
 	}
 	defer func() {
@@ -41,11 +43,42 @@ func isValidApiKey(providedApiKey string, masheryApiKeyValidationURL string, htt
 		return true, "", 0
 	}
 
+	responseBody := getResponseBody(resp, keySuffix)
+
 	if respStatusCode == http.StatusUnauthorized {
-		log.WithField("apiKeyFirstChars", apiKeyFirstChars).Error("Invalid api key")
+		log.WithField("apiKeyLastChars", keySuffix).Errorf("Invalid api key: %v", responseBody)
 		return false, "Invalid api key", http.StatusUnauthorized
 	}
 
-	log.WithField("url", req.URL.String()).WithField("apiKeyFirstChars", apiKeyFirstChars).Errorf("Received unexpected status code from Mashery: %d", respStatusCode)
-	return false, "Request to validate api key returned an unexpected response", http.StatusServiceUnavailable
+	if respStatusCode == http.StatusTooManyRequests {
+		log.WithField("apiKeyLastChars", keySuffix).Errorf("API key rate limit exceeded: %v", responseBody)
+		return false, "Rate limit exceeded", http.StatusTooManyRequests
+	}
+
+	if respStatusCode == http.StatusForbidden {
+		log.WithField("apiKeyLastChars", keySuffix).Errorf("Operation forbidden: %v", responseBody)
+		return false, "Operation forbidden", http.StatusForbidden
+	}
+
+	log.WithField("url", req.URL.String()).WithField("apiKeyLastChars", keySuffix).Errorf("Received unexpected status code from the API Gateway: %d, error message: %v", respStatusCode, responseBody)
+	return false, "Request to validate api key returned an unexpected response", respStatusCode
+}
+
+func getResponseBody(resp *http.Response, keySuffix string) string {
+	type ApiMessage struct {
+		Error string `json:"error"`
+	}
+	msg := ApiMessage{}
+	responseBodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.WithField("apiKeyLastChars", keySuffix).Warnf("Getting API Gateway response body failed: %v", err)
+		return ""
+	}
+
+	err = json.Unmarshal(responseBodyBytes, &msg)
+	if err != nil {
+		log.WithField("apiKeyLastChars", keySuffix).Warnf("Decoding API Gateway response body as json failed: %v", err)
+		return string(responseBodyBytes[:])
+	}
+	return msg.Error
 }

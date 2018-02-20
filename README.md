@@ -115,7 +115,7 @@ curl -X GET "https://<user>@<password>:pre-prod-up.ft.com/lists/notifications-pu
 The reason for this is because Vulcan does not support long polling of HTTP requests. We worked around this issue by forwarding messages through Varnish to a fixed port for both services.
 
 **Productionizing Push API:**
-Mashery does not support long polling of HTTP requests, so the requests come through Fastly. Everytime a client tries to connect to Notifications Push, the service performs a call to Mashery in order to validate the API key from the client.
+The API Gateway does not support long polling of HTTP requests, so the requests come through Fastly. Everytime a client tries to connect to Notifications Push, the service performs a call to the API Gateway in order to validate the API key from the client.
 
 ### Notification history
 A HTTP GET to the `/__history` endpoint will return the history of the last notifications consumed from the Kakfa queue.

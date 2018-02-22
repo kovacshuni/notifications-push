@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Financial-Times/notifications-push/dispatcher"
-	log "github.com/Financial-Times/go-logger"
 	"fmt"
+	log "github.com/Financial-Times/go-logger"
+	"github.com/Financial-Times/notifications-push/dispatch"
 )
 
 const (
@@ -30,7 +30,7 @@ func getApiKey(r *http.Request) string {
 }
 
 // Push handler for push subscribers
-func Push(reg dispatcher.Registrar, apiGatewayKeyValidationURL string, httpClient *http.Client) func(w http.ResponseWriter, r *http.Request) {
+func Push(reg dispatch.Registrar, apiGatewayKeyValidationURL string, httpClient *http.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-type", "text/event-stream; charset=UTF-8")
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -61,12 +61,12 @@ func Push(reg dispatcher.Registrar, apiGatewayKeyValidationURL string, httpClien
 		monitorParam := r.URL.Query().Get("monitor")
 		isMonitor, _ := strconv.ParseBool(monitorParam)
 
-		var s dispatcher.Subscriber
+		var s dispatch.Subscriber
 
 		if isMonitor {
-			s = dispatcher.NewMonitorSubscriber(getClientAddr(r), contentTypeParam)
+			s = dispatch.NewMonitorSubscriber(getClientAddr(r), contentTypeParam)
 		} else {
-			s = dispatcher.NewStandardSubscriber(getClientAddr(r), contentTypeParam)
+			s = dispatch.NewStandardSubscriber(getClientAddr(r), contentTypeParam)
 		}
 
 		reg.Register(s)

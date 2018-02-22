@@ -4,17 +4,17 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Financial-Times/notifications-push/dispatcher"
 	log "github.com/Financial-Times/go-logger"
+	"github.com/Financial-Times/notifications-push/dispatch"
 )
 
 type subscriptionStats struct {
-	NrOfSubscribers int                     `json:"nrOfSubscribers"`
-	Subscribers     []dispatcher.Subscriber `json:"subscribers"`
+	NrOfSubscribers int                   `json:"nrOfSubscribers"`
+	Subscribers     []dispatch.Subscriber `json:"subscribers"`
 }
 
 // Stats returns subscriber stats
-func Stats(dispatcher dispatcher.Dispatcher) func(w http.ResponseWriter, r *http.Request) {
+func Stats(dispatcher dispatch.Dispatcher) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		subscribers := dispatcher.Subscribers()
 

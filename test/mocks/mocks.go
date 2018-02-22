@@ -1,8 +1,8 @@
 package mocks
 
 import (
-	"github.com/Financial-Times/notifications-push/dispatcher"
 	"github.com/stretchr/testify/mock"
+	"github.com/Financial-Times/notifications-push/dispatch"
 	"net/http"
 	"io/ioutil"
 	"strings"
@@ -25,23 +25,23 @@ func (m *MockDispatcher) Stop() {
 }
 
 // Send mocks Send
-func (m *MockDispatcher) Send(notification ...dispatcher.Notification) {
+func (m *MockDispatcher) Send(notification ...dispatch.Notification) {
 	m.Called(notification)
 }
 
 // Subscribers mocks Subscribers
-func (m *MockDispatcher) Subscribers() []dispatcher.Subscriber {
+func (m *MockDispatcher) Subscribers() []dispatch.Subscriber {
 	args := m.Called()
-	return args.Get(0).([]dispatcher.Subscriber)
+	return args.Get(0).([]dispatch.Subscriber)
 }
 
 // Register mocks Register
-func (m *MockDispatcher) Register(subscriber dispatcher.Subscriber) {
+func (m *MockDispatcher) Register(subscriber dispatch.Subscriber) {
 	m.Called(subscriber)
 }
 
 // Close mocks Close
-func (m *MockDispatcher) Close(subscriber dispatcher.Subscriber) {
+func (m *MockDispatcher) Close(subscriber dispatch.Subscriber) {
 	m.Called(subscriber)
 }
 

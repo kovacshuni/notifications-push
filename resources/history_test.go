@@ -5,12 +5,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Financial-Times/notifications-push/dispatcher"
 	"github.com/stretchr/testify/assert"
+	"github.com/Financial-Times/notifications-push/dispatch"
 )
 
 func TestHistory(t *testing.T) {
-	history := dispatcher.NewHistory(1)
+	history := dispatch.NewHistory(1)
 
 	req, err := http.NewRequest("GET", "/__history", nil)
 	if err != nil {

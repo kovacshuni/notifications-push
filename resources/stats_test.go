@@ -5,14 +5,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Financial-Times/notifications-push/dispatcher"
 	"github.com/Financial-Times/notifications-push/test/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/Financial-Times/notifications-push/dispatch"
 )
 
 func TestStats(t *testing.T) {
 	d := new(mocks.MockDispatcher)
-	d.On("Subscribers").Return([]dispatcher.Subscriber{})
+	d.On("Subscribers").Return([]dispatch.Subscriber{})
 
 	w := httptest.NewRecorder()
 	req, err := http.NewRequest("GET", "/stats", nil)

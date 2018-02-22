@@ -9,19 +9,19 @@ import (
 
 	"strings"
 
-	"github.com/Financial-Times/notifications-push/dispatcher"
 	"github.com/Financial-Times/notifications-push/test/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/Financial-Times/notifications-push/dispatch"
 )
 
-var start func(sub dispatcher.Subscriber)
+var start func(sub dispatch.Subscriber)
 
 func TestPushStandardSubscriber(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -32,7 +32,7 @@ func TestPushStandardSubscriber(t *testing.T) {
 	req.Header.Set("X-Forwarded-For", "some-host, some-other-host-that-isnt-used")
 	req.Header.Set(apiKeyHeaderField, "some-api-key")
 
-	start = func(sub dispatcher.Subscriber) {
+	start = func(sub dispatch.Subscriber) {
 		sub.NotificationChannel() <- "hi"
 		time.Sleep(10 * time.Millisecond)
 		w.closer <- true
@@ -62,8 +62,8 @@ func TestPushStandardSubscriber(t *testing.T) {
 func TestPushMonitorSubscriber(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.monitorSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.monitorSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.monitorSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.monitorSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push?monitor=true", nil)
@@ -74,7 +74,7 @@ func TestPushMonitorSubscriber(t *testing.T) {
 	req.Header.Set("X-Forwarded-For", "some-host, some-other-host-that-isnt-used")
 	req.Header.Set(apiKeyHeaderField, "some-api-key")
 
-	start = func(sub dispatcher.Subscriber) {
+	start = func(sub dispatch.Subscriber) {
 		sub.NotificationChannel() <- "hi"
 		time.Sleep(10 * time.Millisecond)
 		w.closer <- true
@@ -117,8 +117,8 @@ func TestPushFailed(t *testing.T) {
 
 func TestPushInvalidType(t *testing.T) {
 	d := new(MockDispatcher)
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push?type=InvalidType", nil)
@@ -129,7 +129,7 @@ func TestPushInvalidType(t *testing.T) {
 	req.Header.Set("X-Forwarded-For", "some-host, some-other-host-that-isnt-used")
 	req.Header.Set(apiKeyHeaderField, "some-api-key")
 
-	start = func(sub dispatcher.Subscriber) {
+	start = func(sub dispatch.Subscriber) {
 		sub.NotificationChannel() <- "hi"
 		time.Sleep(10 * time.Millisecond)
 		w.closer <- true
@@ -152,8 +152,8 @@ func TestPushInvalidType(t *testing.T) {
 func TestAPIGatewayDown(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -164,7 +164,7 @@ func TestAPIGatewayDown(t *testing.T) {
 	req.Header.Set("X-Forwarded-For", "some-host, some-other-host-that-isnt-used")
 	req.Header.Set(apiKeyHeaderField, "some-api-key")
 
-	start = func(sub dispatcher.Subscriber) {
+	start = func(sub dispatch.Subscriber) {
 		sub.NotificationChannel() <- "hi"
 		time.Sleep(10 * time.Millisecond)
 		w.closer <- true
@@ -181,8 +181,8 @@ func TestAPIGatewayDown(t *testing.T) {
 func TestInvalidApiKey(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -193,7 +193,7 @@ func TestInvalidApiKey(t *testing.T) {
 	req.Header.Set("X-Forwarded-For", "some-host, some-other-host-that-isnt-used")
 	req.Header.Set(apiKeyHeaderField, "some-wrong-api-key")
 
-	start = func(sub dispatcher.Subscriber) {
+	start = func(sub dispatch.Subscriber) {
 		sub.NotificationChannel() <- "hi"
 		time.Sleep(10 * time.Millisecond)
 		w.closer <- true
@@ -210,8 +210,8 @@ func TestInvalidApiKey(t *testing.T) {
 func TestEmptyApiKey(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -222,7 +222,7 @@ func TestEmptyApiKey(t *testing.T) {
 	req.Header.Set("X-Forwarded-For", "some-host, some-other-host-that-isnt-used")
 	req.Header.Set(apiKeyHeaderField, "")
 
-	start = func(sub dispatcher.Subscriber) {
+	start = func(sub dispatch.Subscriber) {
 		sub.NotificationChannel() <- "hi"
 		time.Sleep(10 * time.Millisecond)
 		w.closer <- true
@@ -239,8 +239,8 @@ func TestEmptyApiKey(t *testing.T) {
 func TestInvalidUrlForValidatingApiKey(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -251,7 +251,7 @@ func TestInvalidUrlForValidatingApiKey(t *testing.T) {
 	req.Header.Set("X-Forwarded-For", "some-host, some-other-host-that-isnt-used")
 	req.Header.Set(apiKeyHeaderField, "some-api-key")
 
-	start = func(sub dispatcher.Subscriber) {
+	start = func(sub dispatch.Subscriber) {
 		sub.NotificationChannel() <- "hi"
 		time.Sleep(10 * time.Millisecond)
 		w.closer <- true
@@ -268,8 +268,8 @@ func TestInvalidUrlForValidatingApiKey(t *testing.T) {
 func TestClientErrorByRequestingValidatingApiKey(t *testing.T) {
 	d := new(MockDispatcher)
 
-	d.On("Register", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
-	d.On("Close", mock.AnythingOfType("*dispatcher.standardSubscriber")).Return()
+	d.On("Register", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
+	d.On("Close", mock.AnythingOfType("*dispatch.standardSubscriber")).Return()
 
 	w := NewStreamResponseRecorder()
 	req, err := http.NewRequest("GET", "/content/notifications-push", nil)
@@ -280,7 +280,7 @@ func TestClientErrorByRequestingValidatingApiKey(t *testing.T) {
 	req.Header.Set("X-Forwarded-For", "some-host, some-other-host-that-isnt-used")
 	req.Header.Set(apiKeyHeaderField, "some-api-key")
 
-	start = func(sub dispatcher.Subscriber) {
+	start = func(sub dispatch.Subscriber) {
 		sub.NotificationChannel() <- "hi"
 		time.Sleep(10 * time.Millisecond)
 		w.closer <- true
@@ -298,7 +298,7 @@ type MockDispatcher struct {
 	mocks.MockDispatcher
 }
 
-func (m *MockDispatcher) Register(sub dispatcher.Subscriber) {
+func (m *MockDispatcher) Register(sub dispatch.Subscriber) {
 	m.Called(sub)
 	go start(sub)
 }

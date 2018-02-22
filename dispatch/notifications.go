@@ -1,4 +1,4 @@
-package dispatcher
+package dispatch
 
 // Notification model
 type Notification struct {
